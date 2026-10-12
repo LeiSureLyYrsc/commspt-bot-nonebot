@@ -74,6 +74,8 @@ class LittleSkinUser(BaseModel):
             verify=VERIFY_CONTENT,
         ) as client:
             api = await client.get("https://littleskin.cn/api/admin/users", params={"q": query_string})
+            # 显式校验状态码：401/403 等 4xx 快速失败（不重试），5xx/429 交由重试层处理
+            api.raise_for_status()
             if data := api.json()["data"]:
                 return cls(**data[0])
             return None
