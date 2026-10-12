@@ -9,6 +9,7 @@ LittleSkin 的社区支持 QQ 机器人，主要基于 [nonebot/nonebot2](https:
 - [简易问答内容配置](#simple-response-content)
 - **泛平台消息层**：消息收发、图片、@ 均基于 `UniMessage`（UniSeg），命令解析跨平台通用
 - **双后端出图**：`BROWSERLESS_MODE` 可在远程 Browserless 服务与本地 Playwright 渲染间切换
+- **外部服务失败重试**：`FAILED_RETRY_TIME` 控制重试次数（默认 2，即合计最多 3 次请求），失败后回复统一提示「处理你的请求时发生了一些问题」并记录各网络服务的中文失败日志
 
 ## 目录结构
 *此结构可以表达大部分框架原理，但可能不是实时更新*
@@ -88,6 +89,7 @@ cp config.yml.example config.yml
 | `DB_MONGO__URL` | MongoDB 连接串（QQ↔UID 映射） |
 | `API_BROWSERLESS__ENDPOINT` | browserless 截图服务（`BROWSERLESS_MODE=REMOTE` 时使用） |
 | `BROWSERLESS_MODE` | 出图后端：`REMOTE`（默认，调用远程 Browserless）或 `LOCAL`（本地 Playwright 渲染）。`LOCAL` 需先安装可选依赖与浏览器内核：`uv sync --extra render-local && uv run playwright install chromium` |
+| `FAILED_RETRY_TIME` | 外部网络服务请求失败后的重试次数（默认 `2`，即合计最多 3 次请求；`0` 表示不重试）。生效于 `&ygg` / `&pro` / `&user` / `&uid`，渲染类服务（SkinRenderMC / Browserless / 本地 Playwright）与 QQ 协议端调用不重试 |
 | `API_SKINRENDERMC__ENDPOINT` | 皮肤渲染服务 |
 | `API_CLOUDCONFIG` | 云控配置（JSON 对象） |
 | `COMMSPT_SIMPLE_RESPONSE_FILE` | 简易问答内容 JSON 文件路径（默认项目根目录 `commspt_simple_response.json`） |
