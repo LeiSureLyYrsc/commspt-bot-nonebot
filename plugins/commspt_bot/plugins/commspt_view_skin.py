@@ -23,6 +23,7 @@ from plugins.commspt_bot.models.const import (
     get_ygg_player,
 )
 from plugins.commspt_bot.utils.adv_filter import in_preset_cafe
+from plugins.commspt_bot.utils.replies import USER_NOT_FOUND_MESSAGE
 from plugins.commspt_bot.utils.skinrendermcapi import (
     process_image,
     request_skinrendermc,
@@ -36,7 +37,7 @@ async def _render_skin(matcher, player_name: str, player_type: str, source: str)
         # 调用外部 Yggdrasil API 查询玩家档案（包含皮肤、披风 URL 及材质元数据）
         player = await get_ygg_player(player_type=player_type, player_name=player_name)
     except PlayerNotFoundError:
-        await matcher.send(UniMessage(f"「{player_name}」不存在"), reply_to=True)
+        await matcher.send(UniMessage(USER_NOT_FOUND_MESSAGE), reply_to=True)
         return
 
     # 提取皮肤与披风的下载直链以及角色名铭牌文本
