@@ -36,6 +36,7 @@ class RenderUserInfo(BaseModel):
     score: int
     nickname: str
     network: str = ""
+    is_dark_mode: bool = False
 
     qq: int | None = None
     qq_nickname: str = ""
@@ -66,4 +67,5 @@ class RenderUserInfo(BaseModel):
         ipip = await BingLingIPIP.get(self.ip[0])
         self.network = f"{ipip.country_name}{ipip.region_name}{ipip.city_name} {ipip.isp_domain}{ipip.owner_domain}"
 
-        return await screenshot("user-info.html.jinja", **self.model_dump(), height=750 if self.qq else 600)
+        # 最小视口高度配合完整页面截图，避免长昵称/封禁原因被裁切或留下固定高度空白。
+        return await screenshot("user-info.html.jinja", **self.model_dump(), height=1, full_page=True)
