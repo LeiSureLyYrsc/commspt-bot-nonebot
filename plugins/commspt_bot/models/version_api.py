@@ -146,8 +146,7 @@ class LibericaJavaLatest(BaseModel):
         libereca_releases = TypeAdapter(list[cls])
 
         # 将下划线命名参数转换为 API 接收的中划线命名参数（如 feature_version -> feature-version）
-        for key in kwargs:
-            kwargs[key.replace("_", "-")] = kwargs.pop(key)
+        kwargs = {key.replace("_", "-"): value for key, value in kwargs.items()}
         async with httpx.AsyncClient(verify=VERIFY_CONTENT) as client:
             return libereca_releases.validate_python(
                 (
