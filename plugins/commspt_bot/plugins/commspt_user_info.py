@@ -25,6 +25,8 @@ from plugins.commspt_bot.utils.adv_filter import (
 )
 from plugins.commspt_bot.utils.mongodb_manager import write_uid_db
 from plugins.commspt_bot.utils.qq_profile import get_qq_nickname
+from plugins.commspt_bot.utils.replies import SERVICE_FAILURE_MESSAGE
+from plugins.commspt_bot.utils.retry import call_with_retry
 
 user_info = on_alconna(
     Alconna(
@@ -45,25 +47,35 @@ user_info = on_alconna(
 async def _user_info(bot: Bot, uid: Match[int]):
     """根据 UID 查询 LittleSkin 用户信息及 QQ 绑定记录，渲染卡片图片并发送。"""
     logger.info(f"Looking for user info uid={uid.result}")
-    # 调用 LittleSkin API 获取用户公开信息
-    ltsk_user = await LittleSkinUser.uid_info(uid.result)
-    # 从 MongoDB 查询 UID 绑定的 QQ 号
-    mapping_qq = await UIDMapping.fetch(uid=uid.result)
+    try:
+        # 调用 LittleSkin API 获取用户公开信息（失败自动重试，仅重跑本次调用）
+        ltsk_user = await call_with_retry("LittleSkin 管理端 API", LittleSkinUser.uid_info, uid.result)
+        # 从 MongoDB 查询 UID 绑定的 QQ 号（失败自动重试）
+        mapping_qq = await call_with_retry("MongoDB 映射数据库", UIDMapping.fetch, uid=uid.result)
+    except Exception as e:
+        logger.error(f"&user 外部服务请求失败：{type(e).__name__}: {e}")
+        await user_info.send(UniMessage(SERVICE_FAILURE_MESSAGE))
+        return
     logger.info(f"UID Mapping: {uid.result} -> {mapping_qq}")
-    if ltsk_user:
-        logger.info(f"Ready to render {uid.result} ↓")
-        logger.info(ltsk_user)
-        # 查询绑定 QQ 的全局昵称（失败时为空，卡片自动省略昵称）
-        qq = mapping_qq.qq if mapping_qq else None
-        qq_nickname = await get_qq_nickname(bot, qq) if qq else ""
-        # 组装数据，通过 HTML 模板与 Browserless 渲染截图
-        render = RenderUserInfo(**ltsk_user.model_dump(), qq=qq, qq_nickname=qq_nickname)
-        image = await render.get_image()
-        await user_info.send(UniMessage.image(raw=image))
-        logger.success("Image sent.")
-    else:
+    if not ltsk_user:
         await user_info.send(UniMessage(f"未找到 UID 为 {uid.result} 的用户"))
         logger.error(f"UID {uid.result} not found.")
+        return
+    logger.info(f"Ready to render {uid.result} ↓")
+    logger.info(ltsk_user)
+    try:
+        # 查询绑定 QQ 的全局昵称（协议端调用，失败时为空，卡片自动省略昵称）
+        qq = mapping_qq.qq if mapping_qq else None
+        qq_nickname = await get_qq_nickname(bot, qq) if qq else ""
+        # 组装数据，通过 HTML 模板与 Browserless 渲染截图（渲染类服务不重试）
+        render = RenderUserInfo(**ltsk_user.model_dump(), qq=qq, qq_nickname=qq_nickname)
+        image = await render.get_image()
+    except Exception as e:
+        logger.error(f"&user 出图失败：{type(e).__name__}: {e}")
+        await user_info.send(UniMessage(SERVICE_FAILURE_MESSAGE))
+        return
+    await user_info.send(UniMessage.image(raw=image))
+    logger.success("Image sent.")
 
 
 set_uid = on_alconna(
