@@ -21,6 +21,7 @@
     API_LITTLESKIN_ORIGIN__ENDPOINT=https://littleskin.cn
     API_CLOUDCONFIG={"endpoint": "...", "username": "...", "password": "..."}
     LITTLESKIN_ADMIN_TOKEN=...
+    FAILED_RETRY_TIME=2
 
 2. 应用配置（AppConfig）：通过 YAML 文件读取结构化列表等配置，导出配置单例 C_。
    默认从项目根目录的 config.yml 读取（可通过环境变量 COMMSPT_CONFIG_FILE 覆盖路径）：
@@ -140,6 +141,10 @@ class Setting(BaseModel):
     browserless_mode: Literal["REMOTE", "LOCAL"] = "REMOTE"
 
     littleskin_admin_token: str = ""
+
+    # 外部网络服务请求失败后的重试次数（首次失败后再重试的次数）
+    # 环境变量 FAILED_RETRY_TIME；默认 2 表示合计最多 3 次请求，0 表示不重试
+    failed_retry_time: int = 2
 
 
 class AppConfig(BaseModel):
