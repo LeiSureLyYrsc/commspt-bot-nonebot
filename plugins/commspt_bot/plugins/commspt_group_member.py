@@ -15,6 +15,8 @@ from nonebot_plugin_alconna.uniseg import UniMessage
 from plugins.commspt_bot.models.mongodb_data import UIDMapping
 from plugins.commspt_bot.utils.adv_filter import admin_only, in_preset_cafe
 from plugins.commspt_bot.utils.random_sleep import random_sleep
+from plugins.commspt_bot.utils.replies import SERVICE_FAILURE_MESSAGE
+from plugins.commspt_bot.utils.retry import call_with_retry
 
 uid_cmd = on_alconna(
     Alconna(
@@ -36,7 +38,13 @@ async def cmd_uid(target: Match[At | int]):
     """处理 UID 查询指令，输出用户 UID 及邮箱验证标识。"""
     target_qq = int(target.result.target) if isinstance(target.result, At) else target.result  # 提取目标 QQ 号
     logger.info(f"UID search: {target_qq}")
-    uid_mapping = await UIDMapping.fetch(qq=target_qq)  # 从数据库检索 QQ 对应的 UIDMapping 缓存
+    try:
+        # 从数据库检索 QQ 对应的 UIDMapping 缓存（失败自动重试）
+        uid_mapping = await call_with_retry("MongoDB 映射数据库", UIDMapping.fetch, qq=target_qq)
+    except Exception as e:
+        logger.error(f"&uid 映射数据库请求失败：{type(e).__name__}: {e}")
+        await uid_cmd.send(UniMessage(SERVICE_FAILURE_MESSAGE), reply_to=True)
+        return
     logger.success(f"UID search: {target_qq} -> {uid_mapping}")
     await random_sleep()
     if uid_mapping:
