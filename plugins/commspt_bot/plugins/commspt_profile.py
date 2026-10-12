@@ -9,13 +9,19 @@
 """
 
 from arclet.alconna import Alconna, Args, CommandMeta
-from httpx import HTTPStatusError
+from nonebot import logger
 from nonebot_plugin_alconna import Match, on_alconna
 from nonebot_plugin_alconna.uniseg import UniMessage
 
-from plugins.commspt_bot.models.const import PlayerNotFoundError, get_ygg_player
+from plugins.commspt_bot.models.const import (
+    PlayerNameInvalidError,
+    PlayerNotFoundError,
+    get_ygg_player,
+)
 from plugins.commspt_bot.utils.adv_filter import in_preset_cafe
 from plugins.commspt_bot.utils.random_sleep import random_sleep
+from plugins.commspt_bot.utils.replies import SERVICE_FAILURE_MESSAGE, USER_NOT_FOUND_MESSAGE
+from plugins.commspt_bot.utils.retry import call_with_retry
 
 # region %ygg
 ygg = on_alconna(
@@ -36,15 +42,20 @@ ygg = on_alconna(
 async def cmd_ygg(player_name: Match[str]):
     """查询并展示指定角色在 LittleSkin Yggdrasil API 中的资料与材质信息。"""
     try:
-        # 调用外部 LittleSkin Yggdrasil API 查询角色档案
-        player = await get_ygg_player(player_type="ltsk", player_name=player_name.result)
+        # 调用外部 LittleSkin Yggdrasil API 查询角色档案（失败自动重试，查无此人不重试）
+        player = await call_with_retry(
+            "LittleSkin Yggdrasil API",
+            get_ygg_player,
+            player_type="ltsk",
+            player_name=player_name.result,
+            non_retryable=(PlayerNotFoundError,),
+        )
     except PlayerNotFoundError:
-        _message = f"「{player_name.result}」不存在"
-        await ygg.send(UniMessage(_message), reply_to=True)
+        await ygg.send(UniMessage(USER_NOT_FOUND_MESSAGE), reply_to=True)
         return
-    except HTTPStatusError as e:
-        _message = f"请求错误: {e.response.status_code}"
-        await ygg.send(UniMessage(_message), reply_to=True)
+    except Exception as e:
+        logger.error(f"&ygg 查询失败：{type(e).__name__}: {e}")
+        await ygg.send(UniMessage(SERVICE_FAILURE_MESSAGE), reply_to=True)
         return
     # success
     # 提取皮肤模型（默认 default 或纤细 slim）与材质哈希
@@ -85,15 +96,20 @@ pro = on_alconna(
 async def cmd_pro(player_name: Match[str]):
     """查询并展示指定角色在 Mojang 官方正版 API 中的资料与材质信息。"""
     try:
-        # 调用外部 Mojang 正版 API 查询角色档案
-        player = await get_ygg_player(player_type="pro", player_name=player_name.result)
-    except PlayerNotFoundError:
-        _message = f"「{player_name.result}」不存在"
-        await pro.send(UniMessage(_message), reply_to=True)
+        # 调用外部 Mojang 正版 API 查询角色档案（失败自动重试，查无此人/非法角色名不重试）
+        player = await call_with_retry(
+            "Mojang 正版 API",
+            get_ygg_player,
+            player_type="pro",
+            player_name=player_name.result,
+            non_retryable=(PlayerNotFoundError, PlayerNameInvalidError),
+        )
+    except (PlayerNotFoundError, PlayerNameInvalidError):
+        await pro.send(UniMessage(USER_NOT_FOUND_MESSAGE), reply_to=True)
         return
-    except HTTPStatusError as e:
-        _message = f"请求错误: {e.response.status_code}"
-        await pro.send(UniMessage(_message), reply_to=True)
+    except Exception as e:
+        logger.error(f"&pro 查询失败：{type(e).__name__}: {e}")
+        await pro.send(UniMessage(SERVICE_FAILURE_MESSAGE), reply_to=True)
         return
     # success
     # 提取皮肤模型（默认 default 或纤细 slim）与材质哈希
