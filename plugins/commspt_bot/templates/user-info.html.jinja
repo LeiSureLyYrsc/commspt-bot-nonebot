@@ -38,10 +38,10 @@
         * { box-sizing: border-box; }
         body {
             margin: 0;
-            padding: 0;
+            padding: 24px 16px;
             background: var(--soft);
             color: var(--ink);
-            font: 400 16px/1.65 "Noto Sans CJK SC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            font: 400 18px/1.6 "Noto Sans CJK SC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
         }
         h1, h2, p, dl, dd { margin: 0; }
         .mono {
@@ -53,81 +53,68 @@
         .timestamp span { display: block; }
         .record {
             width: 100%;
-            max-width: 530px;
+            max-width: 580px;
             margin: 0 auto;
             background: var(--surface);
             border: 1px solid var(--line);
-            border-radius: 20px;
+            border-radius: 24px;
             overflow: hidden;
         }
-        .record.is-banned { border-color: var(--red-line); border-top: 4px solid var(--red); }
-        .header {
-            padding: 22px 26px 18px;
-            border-bottom: 1px solid var(--line);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-        }
-        .brand { font-size: 15px; font-weight: 600; letter-spacing: -.3px; }
-        .brand small { display: block; font-size: 11px; font-weight: 400; letter-spacing: .7px; color: var(--muted); }
-        .query-label { color: var(--muted); font-size: 12px; }
-        .identity { padding: 26px 26px 22px; }
-        .identity-line { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
+        .record.is-banned { border-color: var(--red-line); border-top: 5px solid var(--red); }
+        .identity { padding: 32px 30px 24px; }
+        .identity-line { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
         .identity-copy { min-width: 0; flex: 1; }
-        h1 { font-size: 27px; line-height: 1.35; font-weight: 600; overflow-wrap: anywhere; }
-        .uid { margin-top: 7px; font-size: 14px; color: var(--muted); }
+        h1 { font-size: 32px; line-height: 1.3; font-weight: 700; overflow-wrap: anywhere; }
+        .uid { margin-top: 8px; font-size: 16px; color: var(--muted); }
         .account-state { flex-shrink: 0; text-align: right; }
-        .state-label { display: block; margin-bottom: 6px; font-size: 11px; color: var(--muted); }
+        .state-label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--muted); }
         .badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 4px 10px;
-            border-radius: 6px;
+            padding: 5px 12px;
+            border-radius: 8px;
             background: var(--green-bg);
             color: var(--green);
-            font-size: 12px;
-            font-weight: 500;
+            font-size: 14px;
+            font-weight: 600;
             white-space: nowrap;
         }
-        .badge::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+        .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
         .is-banned .account-badge { background: var(--red-bg); color: var(--red); }
         .ban-notice {
-            margin-top: 20px;
-            padding: 16px 18px;
-            border-left: 4px solid var(--red);
-            border-radius: 10px;
+            margin-top: 24px;
+            padding: 18px 20px;
+            border-left: 5px solid var(--red);
+            border-radius: 12px;
             background: var(--red-bg);
             color: var(--red);
         }
-        .ban-heading { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
-        .ban-icon { flex: none; width: 18px; height: 18px; }
-        .ban-label { display: block; margin: 8px 0 4px; font-size: 12px; }
-        .ban-reason { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
-        .details { padding: 0 26px 24px; }
-        .email { padding: 16px 18px; border-radius: 12px; background: var(--soft); }
-        .email-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 7px; }
-        .email-heading h2 { font-size: 14px; font-weight: 500; }
-        .email-value { font-size: 18px; overflow-wrap: anywhere; }
+        .ban-heading { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; }
+        .ban-icon { flex: none; width: 20px; height: 20px; }
+        .ban-label { display: block; margin: 10px 0 4px; font-size: 13px; }
+        .ban-reason { font-size: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .details { padding: 0 30px 32px; }
+        .email { padding: 18px 20px; border-radius: 14px; background: var(--soft); }
+        .email-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .email-heading h2 { font-size: 16px; font-weight: 600; }
+        .email-value { font-size: 20px; font-weight: 500; overflow-wrap: anywhere; }
         .email.is-unverified .badge { background: var(--amber-bg); color: var(--amber); }
-        .email-help { margin-top: 6px; font-size: 12px; color: var(--amber); overflow-wrap: anywhere; }
-        .qq-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
-        .qq-note { margin-top: 4px; font-size: 11px; color: var(--green); }
-        .account-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px 16px; margin-top: 20px; }
+        .email-help { margin-top: 8px; font-size: 14px; color: var(--amber); overflow-wrap: anywhere; }
+        .qq-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; margin-top: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
+        .qq-note { margin-top: 4px; font-size: 13px; color: var(--green); }
+        .account-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px 18px; margin-top: 24px; }
         .qq-grid > div, .account-grid > div { min-width: 0; }
-        dt { font-size: 12px; color: var(--muted); }
-        dd { margin-top: 4px; font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
-        .footer { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 14px 26px; border-top: 1px solid var(--line); background: var(--soft); color: var(--muted); font-size: 11px; }
-        @media (max-width: 440px) {
-            .header, .identity { padding: 20px; }
-            .details { padding: 0 20px 20px; }
-            h1 { font-size: 23px; }
-            .footer { padding: 14px 20px; }
+        dt { font-size: 14px; color: var(--muted); }
+        dd { margin-top: 6px; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+        @media (max-width: 480px) {
+            .identity { padding: 24px 20px 20px; }
+            .details { padding: 0 20px 24px; }
+            h1 { font-size: 26px; }
+            .email-value { font-size: 18px; }
         }
-        @media (max-width: 350px) {
-            .account-grid { grid-template-columns: 1fr; }
-            .email-value { font-size: 16px; }
+        @media (max-width: 360px) {
+            .account-grid, .qq-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -138,10 +125,6 @@
     {%- endmacro %}
     {% set banned = permission == -1 %}
     <article class="record{% if banned %} is-banned{% endif %}" aria-label="LittleSkin 用户档案">
-        <header class="header">
-            <div class="brand">LittleSkin<small>COMMUNITY SUPPORT</small></div>
-            <p class="query-label">内部用户查询</p>
-        </header>
         <section class="identity">
             <div class="identity-line">
                 <div class="identity-copy"><h1>{{ nickname }}</h1><p class="uid mono">UID {{ uid }}</p></div>
@@ -174,7 +157,6 @@
                 <div><dt>最后签到</dt><dd>{% if register_at > last_sign_at %}从未签到过{% else %}{{ timestamp(last_sign_at) }}{% endif %}</dd></div>
             </dl>
         </div>
-        <footer class="footer"><span>内部支持 · 用户档案</span><span>生成于 <time class="mono">{{ generated_at }}</time></span></footer>
     </article>
 </body>
 </html>
