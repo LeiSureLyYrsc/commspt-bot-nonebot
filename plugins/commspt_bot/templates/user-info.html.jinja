@@ -43,6 +43,7 @@
             color: var(--ink);
             font: 400 18px/1.4 "Noto Sans CJK SC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
         }
+        body.no-chrome { background: transparent; padding: 0; }
         h1, h2, p, dl, dd { margin: 0; }
         .mono {
             font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
@@ -119,7 +120,7 @@
         }
     </style>
 </head>
-<body>
+<body{% if transparent %} class="no-chrome"{% endif %}>
     {% macro timestamp(value) -%}
     {% set parts = value.split(' ', 1) %}
     <time class="timestamp mono" datetime="{{ value | replace(' ', 'T') }}"><span>{{ parts[0] }}</span>{% if parts | length > 1 %}<span class="clock">{{ parts[1] }}</span>{% endif %}</time>

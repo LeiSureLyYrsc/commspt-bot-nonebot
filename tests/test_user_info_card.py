@@ -172,7 +172,7 @@ async def test_local_backend_forwards_full_page_and_closes_context(renderer, mon
     browser = SimpleNamespace(new_context=AsyncMock(return_value=context))
     monkeypatch.setattr(renderer, "_ensure_browser", AsyncMock(return_value=browser))
     assert await renderer._screenshot_local("<html></html>", 530, 1, True, 2.5, full_page) == b"png"
-    page.screenshot.assert_awaited_once_with(type="png", full_page=full_page)
+    page.screenshot.assert_awaited_once_with(type="png", full_page=full_page, omit_background=False)
     page.evaluate.assert_awaited_once_with(renderer._FONTS_READY)
     assert events == ["fonts", "capture"]
     context.close.assert_awaited_once()
@@ -214,7 +214,7 @@ async def test_remote_backend_forwards_full_page(renderer, monkeypatch, full_pag
     monkeypatch.setattr(renderer.httpx, "AsyncClient", Client)
     assert await renderer._screenshot_remote("<html></html>", 530, 1, True, 2.5, full_page) == b"png"
     payload = clients[0].post.await_args.kwargs["json"]
-    assert payload["options"] == {"type": "png", "fullPage": full_page}
+    assert payload["options"] == {"type": "png", "fullPage": full_page, "omitBackground": False}
     assert payload["viewport"]["height"] == 1
     assert payload["waitForFunction"] == {"fn": renderer._FONTS_READY, "timeout": 10000}
 
@@ -228,10 +228,15 @@ async def test_public_screenshot_keeps_default_and_opt_in(renderer, monkeypatch,
     backend = local if mode == "LOCAL" else remote
     await renderer.screenshot("user-info.html.jinja", **user_data)
     assert backend.await_args.args[2] == 800
-    assert backend.await_args.args[-1] is False
+    assert backend.await_args.args[5] is False
+    assert backend.await_args.args[6] is False
     await renderer.screenshot("user-info.html.jinja", height=1, full_page=True, **user_data)
     assert backend.await_args.args[2] == 1
-    assert backend.await_args.args[-1] is True
+    assert backend.await_args.args[5] is True
+    assert backend.await_args.args[6] is False
+    await renderer.screenshot("user-info.html.jinja", transparent=True, **user_data)
+    assert backend.await_args.args[6] is True
+    assert 'class="no-chrome"' in backend.await_args.args[0]
     assert "LittleSkin_Demo" in backend.await_args.args[0]
 
 

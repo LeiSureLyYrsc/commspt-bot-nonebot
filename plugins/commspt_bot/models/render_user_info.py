@@ -80,4 +80,4 @@ class RenderUserInfo(BaseModel):
         params = self.model_dump()
         if S_.user_card_auto_theme:
             params["is_dark_mode"] = _is_dark_at(now if now is not None else arrow.utcnow().datetime)
-        return await screenshot("user-info.html.jinja", **params, height=1, full_page=True)
+        return await screenshot("user-info.html.jinja", **params, height=1, full_page=True, transparent=True)

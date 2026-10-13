@@ -67,6 +67,7 @@ async def _screenshot_local(
     is_mobile: bool,
     device_scale_factor: float,
     full_page: bool = False,
+    transparent: bool = False,
 ) -> bytes:
     """使用本地 Playwright 渲染 HTML 并截图为 PNG 字节流。"""
     browser = await _ensure_browser()
@@ -85,7 +86,7 @@ async def _screenshot_local(
         await page.set_content(html, wait_until="networkidle")
         # 字体就绪后再等待一次布局绘制，避免中文/数字在截图时仍使用临时回退字体。
         await asyncio.wait_for(page.evaluate(_FONTS_READY), timeout=_FONT_TIMEOUT_SECONDS)
-        return await page.screenshot(type="png", full_page=full_page)
+        return await page.screenshot(type="png", full_page=full_page, omit_background=transparent)
     finally:
         await context.close()
 
@@ -97,6 +98,7 @@ async def _screenshot_remote(
     is_mobile: bool,
     device_scale_factor: float,
     full_page: bool = False,
+    transparent: bool = False,
 ) -> bytes:
     """调用远程 Browserless 服务渲染网页为 PNG 图片字节流。"""
     async with httpx.AsyncClient(
@@ -119,7 +121,7 @@ async def _screenshot_remote(
             },
             json={
                 "html": html,
-                "options": {"type": "png", "fullPage": full_page},
+                "options": {"type": "png", "fullPage": full_page, "omitBackground": transparent},
                 # 视口配置：指定截图分辨率、移动端视口模拟及设备像素比（高 DPI 保证渲染清晰度）
                 "viewport": {
                     "width": width,
@@ -145,17 +147,24 @@ async def screenshot(
     is_mobile: bool = True,
     device_scale_factor: float = 2.5,
     full_page: bool = False,
+    transparent: bool = False,
     **params,
 ) -> bytes:
-    """渲染模板并返回 PNG；``full_page=True`` 捕获视口之外的完整内容。"""
+    """渲染模板并返回 PNG；``full_page=True`` 捕获视口之外的完整内容。
+
+    ``transparent=True`` 时页面背景透明（PNG 保留 alpha），截图内容即卡片本体。
+    """
     # Jinja2 render: 从项目模板目录 TEMPLATE_DIR 加载指定模板文件
     jinja_env = Environment(loader=FileSystemLoader(TEMPLATE_DIR), autoescape=True)
     template = jinja_env.get_template(name=template_name)
+    params["transparent"] = transparent
     html = template.render(params.model_dump()) if isinstance(params, BaseModel) else template.render(params)
 
     if S_.browserless_mode == "LOCAL":
-        return await _screenshot_local(html, width, height, is_mobile, device_scale_factor, full_page)
-    return await _screenshot_remote(html, width, height, is_mobile, device_scale_factor, full_page)
+        return await _screenshot_local(
+            html, width, height, is_mobile, device_scale_factor, full_page, transparent
+        )
+    return await _screenshot_remote(html, width, height, is_mobile, device_scale_factor, full_page, transparent)
 
 
 @get_driver().on_shutdown
