@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit 代码审查配置
+# 文档: https://docs.coderabbit.ai/reference/configuration
+language: "zh-CN"
+
+reviews:
+  # chill: 温和建议；assertive: 严格
+  profile: "chill"
+  # 不因发现问题自动 request changes（由维护者决定是否合并）
+  request_changes_workflow: false
+  high_level_summary: true
+  review_status: true
+  # 关闭打油诗
+  poem: false
+  auto_review:
+    enabled: true
+    # 草稿 PR 不自动审查
+    drafts: false
+  # 排除不需要审查的路径（! 表示排除）
+  path_filters:
+    - "!**/*.lock"
+    - "!**/pixi.lock"
+    - "!**/uv.lock"
+    - "!**/*.egg-info/**"
+    - "!**/.pixi/**"
+    - "!**/__pycache__/**"
+    - "!tests/**"
+    - "!logs/**"
+  path_instructions:
+    - path: "**/*.py"
+      instructions: |
+        - 这是 NoneBot2 的 OneBot v11 插件项目，代码与注释使用中文。
+        - 代码注释遵循「只写为什么，不写是什么」原则，不要建议补充解释性冗余注释。
+        - 已有类型标注，不要建议添加类型注解。
+        - 不要建议添加通用异常捕获（如 `except Exception`），除非确有必要的边界处理。
+        - 关注异步代码的并发安全（asyncio.Lock、竞态条件）与异常处理正确性。
+    - path: "plugins/commspt_bot/plugins/*.py"
+      instructions: |
+        - 这是 NoneBot 插件入口，事件处理函数遵循 matcher 约定。
+        - 注意 `bot.call_api` 的动态 API 调用与参数校验。
+chat:
+  auto_reply: true
