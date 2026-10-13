@@ -18,7 +18,7 @@ __plugin_meta__ = PluginMetadata(
     description="LittleSkin 社区支持 QQ 机器人 (NoneBot2 / OneBot V11)",
     usage="参见 https://bot-manual.commspt.littlesk.in/",
     type="application",
-    homepage="https://github.com/LittleSkinCommspt/commspt-bot-avilla",
+    homepage="https://github.com/LittleSkinCommspt/commspt-bot-nonebot",
     supported_adapters={"~onebot.v11"},
     config=Setting,
 )
