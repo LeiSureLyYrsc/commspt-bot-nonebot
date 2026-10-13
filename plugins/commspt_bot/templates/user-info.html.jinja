@@ -4,6 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>LittleSkin 用户档案</title>
+    {# 引用 Font Awesome 6.5.2 #}
+    <link rel="preconnect" href="https://assets-z1-113a.serinanya.fwnet" />
+    <script async src="https://assets-z1-113a.serinanya.fwnet/fontawesome@6.5.2/js/all.min.js"></script>
+    <style>
+        @import 'https://assets-z1-113a.serinanya.fwnet/fontawesome@6.5.2/css/fontawesome.min.css';
+    </style>
     <style>
         :root {
             color-scheme: light;
@@ -11,6 +17,10 @@
             --ink: #1d2c27;
             --muted: #52665c;
             --line: #dce6df;
+            /* 卡片轮廓：卡片不带阴影且默认满幅，边界全靠这圈描边，需对卡面与各类浅色聊天底
+               (#fff / #f0f0f0 / #e8e8e8) 都保持 ≥3:1，否则浅色主题贴在浅色背景上会「隐形」 */
+            --edge: #728076;
+            --red-edge: #c0604f;
             --soft: #f1f6f2;
             --green: #246944;
             --green-bg: #e8f3eb;
@@ -26,6 +36,9 @@
             --ink: #ecf4ef;
             --muted: #b5c5bc;
             --line: #394a41;
+            /* 暗色主题同理：深卡面贴深色聊天底时描边是唯一的分界依据 */
+            --edge: #74887c;
+            --red-edge: #b4685e;
             --soft: #26362d;
             --green: #a0d9ad;
             --green-bg: #263e2f;
@@ -57,16 +70,22 @@
             max-width: 580px;
             margin: 0 auto;
             background: var(--surface);
-            border: 1px solid var(--line);
+            border: 1px solid var(--edge);
             border-radius: 24px;
             overflow: hidden;
         }
-        .record.is-banned { border-color: var(--red-line); border-top: 5px solid var(--red); }
+        .record.is-banned { border-color: var(--red-edge); border-top: 5px solid var(--red); }
         .identity { padding: 16px 18px 12px; }
         .identity-line { min-width: 0; }
-        .identity-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 8px; }
-        h1 { font-size: 36px; line-height: 1.2; font-weight: 700; overflow-wrap: anywhere; }
-        .uid { min-width: 0; font-size: 22px; font-weight: 600; color: var(--ink); }
+        /* 昵称与状态徽章同排：徽章靠右不参与收缩，昵称换行也不会挤走它 */
+        .identity-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+        /* UID 与积分同属「账号数字」，并排成一组 */
+        .identity-facts { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 8px; }
+        .fact { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 22px; font-weight: 600; color: var(--ink); }
+        .fact .ic { width: 17px; flex: none; color: var(--muted); }
+        h1 { font-size: 36px; line-height: 1.2; font-weight: 700; overflow-wrap: anywhere; flex: 1 1 auto; min-width: 0; }
+        .account-state { flex: none; text-align: right; }
+        .generated { margin-top: 4px; font-size: 13px; color: var(--muted); }
         .account-state { flex-shrink: 0; text-align: right; }
         .state-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
         .badge {
@@ -105,15 +124,28 @@
         .qq-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
         .qq-grid dd { font-size: 20px; line-height: 1.3; }
         .qq-note { margin-top: 2px; font-size: 12px; color: var(--green); }
+        /* 积分移至身份区后剩 3 项：属地占满整行，两个时间戳成对，避免 2+1 留下空格 */
         .account-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; }
+        .account-grid > .is-wide { grid-column: 1 / -1; }
         .qq-grid > div, .account-grid > div { min-width: 0; }
+        /* 字段标签：图标 + 文字 */
+        .ic { width: 13px; height: 13px; flex: none; color: var(--muted); opacity: .85; }
+        .email-heading h2, dt { display: flex; align-items: center; gap: 5px; }
+        .email-help { display: flex; align-items: center; gap: 5px; }
         dt { font-size: 12px; color: var(--muted); }
         dd { margin-top: 3px; font-size: 15px; line-height: 1.3; font-weight: 600; overflow-wrap: anywhere; }
+        /* 相对时间为主读数，绝对时间降为次要行 */
+        .ago { display: block; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
+        .ago.quiet { font-weight: 600; color: var(--muted); }
+        .account-grid .timestamp { font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 3px; }
+        .account-grid .timestamp span { display: inline; }
+        .account-grid .timestamp span + span::before { content: " "; }
         @media (max-width: 480px) {
             .identity { padding: 16px 18px 12px; }
             .details { padding: 0 18px 16px; }
             h1 { font-size: 32px; }
             .email-value { font-size: 18px; }
+            .fact { font-size: 20px; }
         }
         @media (max-width: 360px) {
             .account-grid, .qq-grid { grid-template-columns: 1fr; }
@@ -121,6 +153,27 @@
     </style>
 </head>
 <body{% if transparent %} class="no-chrome"{% endif %}>
+    {# FA-ICONS-START #}
+        {# 图标用 FontAwesome 6.5.2 类名；
+           <i> 由 FA 的 JS 转成 inline SVG，故无需内嵌 path #}
+        {% macro icon(name, cls='ic') -%}
+        {%- set glyph = {
+            'uid': 'fa-solid fa-id-card',
+            'banned': 'fa-solid fa-handcuffs',
+            'nickname': 'fa-solid fa-user',
+            'score': 'fa-solid fa-wallet',
+            'network': 'fa-solid fa-location-dot',
+            'qq': 'fa-brands fa-qq',
+            'check': 'fa-solid fa-check',
+            'signature': 'fa-solid fa-signature',
+            'register': 'fa-solid fa-door-open',
+            'last-sign': 'fa-solid fa-right-to-bracket',
+            'email': 'fa-solid fa-envelope',
+            'warn': 'fa-solid fa-exclamation-triangle',
+        }.get(name) -%}
+        {%- if glyph %}<i class="{{ glyph }} {{ cls }}" aria-hidden="true"></i>{% endif -%}
+        {%- endmacro %}
+        {# FA-ICONS-END #}
     {% macro timestamp(value) -%}
     {% set parts = value.split(' ', 1) %}
     <time class="timestamp mono" datetime="{{ value | replace(' ', 'T') }}"><span>{{ parts[0] }}</span>{% if parts | length > 1 %}<span class="clock">{{ parts[1] }}</span>{% endif %}</time>
@@ -129,35 +182,39 @@
     <article class="record{% if banned %} is-banned{% endif %}" aria-label="LittleSkin 用户档案">
         <section class="identity">
             <div class="identity-line">
-                <h1>{{ nickname }}</h1>
-                <div class="identity-meta"><p class="uid mono">UID {{ uid }}</p>
-                <div class="account-state"><span class="state-label">账户状态</span><span class="badge account-badge">{{ '已封禁' if banned else '正常' }}</span></div>
+                <div class="identity-head">
+                    <h1>{{ nickname }}</h1>
+                    <div class="account-state"><span class="state-label">账户状态</span><span class="badge account-badge">{{ '已封禁' if banned else '正常' }}</span></div>
+                </div>
+                <div class="identity-facts">
+                    <span class="fact mono">{{ icon('uid') }}UID {{ uid }}</span>
+                    <span class="fact mono">{{ icon('score') }}{{ '{:,}'.format(score) }}</span>
                 </div>
             </div>
+            <p class="generated">生成于 {{ generated_at }}</p>
             {% if banned %}
             <section class="ban-notice" aria-label="账户封禁提醒">
-                <h2 class="ban-heading"><svg class="ban-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 7v6c0 4 4 7 8 9 4-2 8-5 8-9V7Z"/><path d="M12 8v5"/><circle cx="12" cy="17" r=".75" fill="currentColor" stroke="none"/></svg>封禁原因</h2>
+                <h2 class="ban-heading">{{ icon('banned', 'ban-icon') }}封禁原因</h2>
                 <p class="ban-reason">{{ (ban_reason or '') | trim or '未提供封禁原因' }}</p>
             </section>
             {% endif %}
         </section>
         <div class="details">
             <section class="email{% if not verified %} is-unverified{% endif %}" aria-label="邮箱信息">
-                <div class="email-heading"><h2>邮箱</h2><span class="badge">{{ '已验证' if verified else '未验证' }}</span></div>
+                <div class="email-heading"><h2>{{ icon('email') }}邮箱</h2><span class="badge">{{ '已验证' if verified else '未验证' }}</span></div>
                 <p class="email-value mono">{{ email }}</p>
-                {% if email | lower != email %}<p class="email-help">{{ email_help }}</p>{% endif %}
+                {% if email | lower != email %}<p class="email-help">{{ icon('warn') }}{{ email_help }}</p>{% endif %}
             </section>
             {% if qq %}
             <dl class="qq-grid">
-                <div><dt>绑定 QQ</dt><dd class="mono">{{ qq }}</dd>{% if qq ~ '@qq.com' == email %}<p class="qq-note">与账号邮箱一致</p>{% endif %}</div>
-                <div><dt>QQ 昵称</dt><dd>{{ qq_nickname or '未获取' }}</dd></div>
+                <div><dt>{{ icon('qq') }}绑定 QQ</dt><dd class="mono">{{ qq }}</dd>{% if qq ~ '@qq.com' == email %}<p class="qq-note">{{ icon('check') }}与账号邮箱一致</p>{% endif %}</div>
+                <div><dt>{{ icon('signature') }}QQ 昵称</dt><dd>{{ qq_nickname or '未获取' }}</dd></div>
             </dl>
             {% endif %}
             <dl class="account-grid">
-                <div><dt>积分</dt><dd class="mono">{{ '{:,}'.format(score) }}</dd></div>
-                <div><dt>注册 IP 属地</dt><dd>{{ network or '未获取' }}</dd></div>
-                <div><dt>注册时间</dt><dd>{{ timestamp(register_at) }}</dd></div>
-                <div><dt>最后签到</dt><dd>{% if register_at > last_sign_at %}从未签到过{% else %}{{ timestamp(last_sign_at) }}{% endif %}</dd></div>
+                <div class="is-wide"><dt>{{ icon('network') }}注册 IP 属地</dt><dd>{{ network or '未获取' }}</dd></div>
+                <div><dt>{{ icon('register') }}注册时间</dt><dd><span class="ago">{{ register_ago }}</span>{{ timestamp(register_at) }}</dd></div>
+                <div><dt>{{ icon('last-sign') }}最后签到</dt><dd>{% if register_at > last_sign_at %}<span class="ago quiet">从未签到过</span>{% else %}<span class="ago">{{ last_sign_ago }}</span>{{ timestamp(last_sign_at) }}{% endif %}</dd></div>
             </dl>
         </div>
     </article>

@@ -28,9 +28,19 @@ _LAUNCH_LOCK = asyncio.Lock()
 _playwright = None
 _browser = None
 _FONT_TIMEOUT_SECONDS = 10
-_FONTS_READY = (
+# 截图前的就绪判定：字体加载完成 → 再等一帧布局绘制（避免中文/数字用临时回退字体渲染），
+# 最后等 FontAwesome 把 <i class="fa-…"> 换成 inline SVG（模板图标依赖它的 JS）。
+# 合成单次 evaluate，LOCAL 与 REMOTE 两条后端共用同一套判定。
+_SELECTORS_READY = "i.fa-solid, i.fa-brands"
+_READY = (
     "async () => { await document.fonts.ready; "
-    "await new Promise(resolve => requestAnimationFrame(resolve)); return true; }"
+    "await new Promise(resolve => requestAnimationFrame(resolve)); "
+    f"if (!document.querySelector('{_SELECTORS_READY}')) return true; "
+    "const deadline = Date.now() + 5000; "
+    "while (Date.now() < deadline) { "
+    f"  if (!document.querySelector('{_SELECTORS_READY}')) return true; "
+    "  await new Promise(r => setTimeout(r, 50)); "
+    "} return true; }"
 )
 
 
@@ -84,8 +94,8 @@ async def _screenshot_local(
         page = await context.new_page()
         # 等待网络空闲（networkidle）确保静态资源加载完成，再按视口截图
         await page.set_content(html, wait_until="networkidle")
-        # 字体就绪后再等待一次布局绘制，避免中文/数字在截图时仍使用临时回退字体。
-        await asyncio.wait_for(page.evaluate(_FONTS_READY), timeout=_FONT_TIMEOUT_SECONDS)
+        # 字体/图标就绪后再截图（见 _READY）
+        await asyncio.wait_for(page.evaluate(_READY), timeout=_FONT_TIMEOUT_SECONDS + 5)
         return await page.screenshot(type="png", full_page=full_page, omit_background=transparent)
     finally:
         await context.close()
@@ -132,7 +142,7 @@ async def _screenshot_remote(
                 # 请求头配置与页面加载策略：设置中文语言偏好，并等待网络连接空闲（networkidle0）确保静态资源加载完成
                 "setExtraHTTPHeaders": {"Accept-Language": "zh-CN,en;q=0.9"},
                 "gotoOptions": {"waitUntil": ["networkidle0"]},
-                "waitForFunction": {"fn": _FONTS_READY, "timeout": _FONT_TIMEOUT_SECONDS * 1000},
+                "waitForFunction": {"fn": _READY, "timeout": (_FONT_TIMEOUT_SECONDS + 5) * 1000},
             },
         )
         # raise exception if status is bad
