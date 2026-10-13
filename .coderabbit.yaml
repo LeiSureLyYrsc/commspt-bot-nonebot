@@ -1,5 +1,6 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 # CodeRabbit 代码审查配置
+# 项目：commspt-bot-nonebot —— LittleSkin 社区支持 QQ 机器人（NoneBot2 / OneBot v11）
 # 文档: https://docs.coderabbit.ai/reference/configuration
 language: "zh-CN"
 
@@ -9,34 +10,142 @@ reviews:
   # 不因发现问题自动 request changes（由维护者决定是否合并）
   request_changes_workflow: false
   high_level_summary: true
+  # 列出本次改动涉及的文件清单，方便维护者快速概览
+  changed_files_summary: true
   review_status: true
   # 关闭打油诗
   poem: false
+  # 针对复杂流程（如入群审批状态机、渲染重试链路）生成时序图，辅助理解
+  sequence_diagrams: true
+
   auto_review:
     enabled: true
     # 草稿 PR 不自动审查
     drafts: false
+    # 仅对这些目标分支开启自动审查
+    base_branches:
+      - main
+    # 标题含以下关键词的 PR 跳过自动审查
+    ignore_title_keywords:
+      - "WIP"
+      - "DO NOT MERGE"
+      - "草稿"
+      - "勿合并"
+
+  # 合并前检查：本项目 PR 描述与文档并非强约束，保持提醒而非拦截
+  pre_merge_checks:
+    description:
+      mode: "warning"
+
+  # 静态分析工具集成（复用仓库既有配置，避免与本地 ruff 结果打架）
+  tools:
+    ruff:
+      enabled: true
+      config_file: "pyproject.toml"
+    markdownlint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    yamllint:
+      enabled: true
+
   # 排除不需要审查的路径（! 表示排除）
   path_filters:
+    # 依赖锁文件与包管理产物（体积大、机器生成，无审查价值）
     - "!**/*.lock"
     - "!**/pixi.lock"
     - "!**/uv.lock"
     - "!**/*.egg-info/**"
     - "!**/.pixi/**"
     - "!**/__pycache__/**"
-    - "!tests/**"
+    # 运行时产物与缓存
     - "!logs/**"
+    - "!**/.pytest_cache/**"
+    - "!**/.ruff_cache/**"
+    # 静态资源（图片/字体，二进制无需逐行审查；渲染逻辑仍在代码中审查）
+    - "!assets/**"
+    # 示例配置文件（含占位值，非真实密钥）
+    - "!config.yml.example"
+    - "!.env.example"
+
   path_instructions:
+    # ------------------------------------------------------------------
+    # Python 代码（通用领域约束）
+    # ------------------------------------------------------------------
     - path: "**/*.py"
       instructions: |
-        - 这是 NoneBot2 的 OneBot v11 插件项目，代码与注释使用中文。
-        - 代码注释遵循「只写为什么，不写是什么」原则，不要建议补充解释性冗余注释。
-        - 已有类型标注，不要建议添加类型注解。
-        - 不要建议添加通用异常捕获（如 `except Exception`），除非确有必要的边界处理。
-        - 关注异步代码的并发安全（asyncio.Lock、竞态条件）与异常处理正确性。
+        本项目是 NoneBot2 / OneBot v11 插件，代码与注释使用中文。审查时注意：
+        - 异步并发安全：关注 asyncio.Lock、竞态条件、共享可变状态。
+        - 外部网络调用应复用既有重试封装（utils/retry.py，FAILED_RETRY_TIME 控制次数）。
+        - 技术栈为 httpx / pydantic v2 / motor，请基于这些库给出建议。
+        参考配置：ruff line-length=120 / target py312（见 pyproject.toml）。
+
+    # ------------------------------------------------------------------
+    # 插件入口（命令与事件处理）
+    # ------------------------------------------------------------------
     - path: "plugins/commspt_bot/plugins/*.py"
       instructions: |
-        - 这是 NoneBot 插件入口，事件处理函数遵循 matcher 约定。
-        - 注意 `bot.call_api` 的动态 API 调用与参数校验。
+        事件处理函数遵循 matcher 约定（on_command / on_message / on_regex）。重点：
+        - 命令权限复用 utils/adv_filter.py 的白名单 / 管理员校验。
+        - 消息构造优先使用 UniMessage / utils/onebot_message.py 的既有工具。
+        - bot.call_api 属动态调用，注意参数校验，避免用户输入直接进入 API 参数。
+        - 面向用户的回复不泄露内部堆栈、UID、连接串等敏感信息。
+
+    # ------------------------------------------------------------------
+    # 外部 API 模型层
+    # ------------------------------------------------------------------
+    - path: "plugins/commspt_bot/models/*.py"
+      instructions: |
+        封装外部服务（LittleSkin Admin / CSL / Yggdrasil / IP 归属地 / 版本查询）的
+        pydantic v2 模型与客户端。重点：
+        - 外部响应字段缺失 / 类型不符时的容错（默认值、Optional、异常兜底）。
+        - 配置与密钥统一从 config.py / .env 注入。
+        - 日志不输出完整响应体（可能含敏感字段）。
+
+    # ------------------------------------------------------------------
+    # 共享工具层（渲染 / Mongo / 重试）
+    # ------------------------------------------------------------------
+    - path: "plugins/commspt_bot/utils/*.py"
+      instructions: |
+        utils 为共享基础能力，改动既有接口时注意同步所有调用方。重点：
+        - browserless.py / skinrendermcapi.py：远程渲染与外部 URL，关注 SSRF，
+          仅允许受控目标地址。
+        - mongodb_manager.py：并发写、连接复用与索引使用，避免热路径重复建连。
+        - retry.py / random_sleep.py：重试上限与退避策略，避免阻塞事件循环。
+
+    # ------------------------------------------------------------------
+    # Jinja2 出图模板（安全重点）
+    # ------------------------------------------------------------------
+    - path: "plugins/commspt_bot/templates/*.jinja"
+      instructions: |
+        用户信息卡 Jinja2 模板，经 Browserless / 本地 Playwright 渲染为图片。重点：
+        - 安全：用户可控内容必须默认自动转义，禁止用 `| safe` 等渲染未净化的用户数据（XSS）。
+        - 兼容：需同时适配远程 Browserless 与本地 Playwright 两种后端；
+          字体仅用 assets/fonts 内置资源，避免仅本机可用的 CSS 特性。
+
+    # ------------------------------------------------------------------
+    # 测试
+    # ------------------------------------------------------------------
+    - path: "tests/**"
+      instructions: |
+        pytest + pytest-asyncio（asyncio_mode=auto，见 pytest.ini）。重点：
+        - 异步用例直接 async def，auto 模式已启用，无需 @pytest.mark.asyncio。
+        - 用例相互独立，外部网络 / 数据库依赖应 mock（可用 nonebug）。
+        - 示例数据不得包含真实玩家 Token / UID / 连接串。
+
+    # ------------------------------------------------------------------
+    # 文档
+    # ------------------------------------------------------------------
+    - path: "**/*.md"
+      instructions: |
+        文档使用中文。若改动涉及命令、配置项或目录结构，请核对 README 是否需要同步更新；
+        命令示例应与本项目的 `&` / `%` 前缀约定一致。
+
 chat:
   auto_reply: true
+
+# 让 CodeRabbit 学习仓库既有风格；可按需调整
+knowledge_base:
+  learnings:
+    scope: "local"
+  opt_out: false
