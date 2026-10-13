@@ -10,6 +10,7 @@ LittleSkin 的社区支持 QQ 机器人，主要基于 [nonebot/nonebot2](https:
 - **泛平台消息层**：消息收发、图片、@ 均基于 `UniMessage`（UniSeg），命令解析跨平台通用
 - **双后端出图**：`BROWSERLESS_MODE` 可在远程 Browserless 服务与本地 Playwright 渲染间切换
 - **外部服务失败重试**：`FAILED_RETRY_TIME` 控制重试次数（默认 2，即合计最多 3 次请求），失败后回复统一提示「处理你的请求时发生了一些问题」并记录各网络服务的中文失败日志
+- **入群审批双入口**：既可在通知消息下回复 `do accept` / `do reject` 文字命令审批，也可直接对通知消息贴 👍 / 👎 表情快捷审批（见[入群审批](#join-approval)）
 
 ## 目录结构
 *此结构可以表达大部分框架原理，但可能不是实时更新*
@@ -30,6 +31,8 @@ plugins/commspt_bot/              # 父插件（共享层）
 ├── utils/
 │   ├── adv_filter.py             # 群白名单 / 管理员 规则与权限
 │   ├── messenger.py              # 跨群发送工具
+│   ├── join_action.py            # 入群审批公共执行核心 + 表情审批凭证索引
+│   ├── join_request_notice.py    # 入群申请通知的格式化与解析
 │   ├── browserless.py            # Jinja2 渲染 → Browserless 远程 / 本地 Playwright 截图
 │   ├── onebot_message.py         # 原生命令匹配 / 参数解析 / 引用回复工具
 │   ├── skinrendermcapi.py        # 皮肤渲染 + 水印
@@ -47,7 +50,8 @@ plugins/commspt_bot/              # 父插件（共享层）
     ├── commspt_get_latest.py         # &csl.latest / &ygg.latest / &java.latest
     ├── commspt_mute.py               # &mute / &unmute / &recall / &muteall ...（原生 OneBot V11）
     ├── commspt_join_group.py         # 入群申请审核 + 新成员欢迎
-    ├── commspt_do_action_join.py     # do accept|reject 手动审批（裸命令，原生 on_regex）
+    ├── commspt_do_action_join.py     # do accept|reject 手动审批（回复通知消息，裸命令，原生 on_regex）
+    ├── commspt_join_emoji.py         # 对审批通知贴 👍/👎 表情快捷审批（原生 on_notice）
     ├── commspt_ot_nt.py              # &ot 定向提醒
     ├── commspt_dev.py                # &id 环境信息
     └── commspt_log_file.py           # 群文件消息日志（占位）
@@ -101,6 +105,22 @@ cp config.yml.example config.yml
 
 `USER_CARD_AUTO_THEME` 默认开启：按 `Asia/Shanghai` 时区，07:00（含）至 19:00（不含）使用浅色，其余时间使用深色，与服务器本地时区无关。设为 `false` 后，完全恢复被查询账户的 `is_dark_mode` 偏好。该开关只影响用户信息卡，不修改账户数据，也不影响其他图卡。
 
+<a id="join-approval"></a>
+
+### 入群审批
+
+当入群申请无法自动处理（答案为非纯数字、UID 不存在、Admin API 查询失败等）时，机器人会把申请详情发到管理群（主群 → `commspt_group`，茶馆群 → `littleskin_cafe`），并为该通知消息贴上 👍 / 👎 引导表情，供管理员审批。管理员有两种等价的操作方式，二者共用同一执行核心，同一条申请只会被处理一次：
+
+1. **文字命令**：回复该通知消息，发送 `do accept` 或 `do reject [原因]`（裸命令，不受全局前缀影响）。
+2. **表情回应**：直接对该通知消息贴 👍（批准）或 👎（拒绝）。仅发起审批的管理员本人、且在允许的群聊内有效；Bot 自身贴表情不会触发。
+
+表情审批的处理要点：
+
+- 凭证按 `message_id` 登记，**弹出即消费**，确保每条申请只被处理一次；凭证默认保留 24 小时，期间惰性清理过期条目。
+- 单表情直接判定意图；多种表情并存时调用 `get_msg_emoji_likes` 复核操作者本人贴的表情，查询失败时按 fail-closed 处理（不审批、保留凭证供重试）。
+- 审批结果在群内 @ 操作管理员播报；成功时撤销通知消息上的 👍/👎 引导表情，执行出错则保留凭证便于重试。
+- 协议端不支持 `set_msg_emoji_like` / `group_msg_emoji_like` 时静默降级，不影响 `do` 命令审批。
+
 ### 3. 运行
 
 ```bash
@@ -116,8 +136,11 @@ uv run pytest -q
 
 测试覆盖插件加载、Alconna 命令 + 1 个静态问答分发器（服务 commspt_simple_response.json 中的全部问答命令）的注册、命令参数解析（`Match` / `At` / 默认值 / 别名）、
 原生命令（`&mute` / `&unmute` / `&recall` / `&muteall` / `&unmuteall` / `do`）的规则匹配与参数解析、
-群白名单、管理员权限、业务逻辑直连测试（禁言 / 撤回 / 全员禁言的 API 调用参数），
-以及简易问答 JSON 加载测试（`tests/test_simple_response.py`，覆盖默认路径、环境变量覆盖、文件缺失、schema 校验、有序 `messages` 片段构建等场景）。
+群白名单、管理员权限、业务逻辑直连测试（禁言 / 撤回 / 全员禁言的 API 调用参数）。此外：
+
+- `tests/test_join_action.py`：入群审批公共执行核心（`execute_join_action` 的批准/拒绝参数、异常归类），
+  以及表情审批凭证索引（`remember_approval` / `pop_approval` 的弹出即消费、过期清理等）的单元测试。
+- `tests/test_user_info_card.py`：用户信息卡的数据模型与渲染相关测试。
 
 <a id="simple-response-content"></a>
 
@@ -191,6 +214,7 @@ uv run pytest -q
 | 禁言 / 解除禁言 / 全员禁言 | 原生 `on_message` + `bot.set_group_ban` / `set_group_whole_ban` | OneBot V11 |
 | 撤回消息 | 原生 `on_message` + `bot.delete_msg` | OneBot V11 |
 | 入群审批（自动/手动） | `GroupRequestEvent.approve()` / `set_group_add_request` | OneBot V11 |
+| 审批通知表情回应 | 原生 `on_notice` + `set_msg_emoji_like` / `get_msg_emoji_likes` | OneBot V11（需协议端支持 `group_msg_emoji_like`） |
 
 泛平台消息层已就绪；如需接入其它平台，只需在 `utils/messenger.py` 与相关子插件中
 增加对应平台的动作实现。
@@ -208,6 +232,7 @@ uv run pytest -q
 | `ctx.scene.into(f"::group({g})").send_message(x)` | `UniMessage(x).send(Target.group(str(g), ...))` |
 | `Picture(RawResource(b))` | `UniMessage.image(raw=b)` |
 | `MuteCapability` / `RequestCapability` | `bot.set_group_ban` / `event.approve()` |
+| 无（NoneBot 新增） | 审批通知表情回应：`on_notice` + `set_msg_emoji_like` / `get_msg_emoji_likes` |
 | 原生命令（`on_command` 语义） | `on_message(rule=native_command_rule(...))`（基于 `get_plaintext`，兼容 `&` 前缀）+ `extract_command_args` |
 | `S_ = Setting(**yaml.safe_load(...))` | `S_ = get_plugin_config(Setting)`（值来自 `.env`）+ `C_`（列表值来自 `config.yml`） |
 
