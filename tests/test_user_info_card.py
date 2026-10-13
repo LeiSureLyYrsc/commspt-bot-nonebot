@@ -114,6 +114,17 @@ def test_shield_only_appears_for_banned_accounts(template, user_data):
     assert 'class="ban-icon"' in template.render(user_data)
 
 
+def test_compact_ban_heading_keeps_full_reason(template, user_data):
+    reason = "第一段合成说明。\n" + "保留完整的后续原因。" * 40
+    user_data.update(permission=-1, ban_reason=reason)
+    html = template.render(user_data)
+    assert "</svg>封禁原因</h2>" in html
+    assert "账户已封禁" not in html
+    assert 'class="ban-label"' not in html
+    assert reason in html
+    assert 'account-badge">已封禁<' in html
+
+
 def load_isolated_module(monkeypatch, name, path):
     spec = importlib.util.spec_from_file_location(name, ROOT / path)
     module = importlib.util.module_from_spec(spec)
