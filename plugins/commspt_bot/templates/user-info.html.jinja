@@ -78,15 +78,22 @@
         .identity { padding: 16px 18px 12px; }
         .identity-line { min-width: 0; }
         /* 昵称与状态徽章同排：徽章靠右不参与收缩，昵称换行也不会挤走它 */
-        .identity-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+        .identity-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 36px;
+            line-height: 1.2;
+        }
         /* UID 与积分同属「账号数字」，并排成一组 */
-        .identity-facts { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 8px; }
+        .identity-facts { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
         .fact { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 22px; font-weight: 600; color: var(--ink); }
-        .fact .ic { width: 17px; flex: none; color: var(--muted); }
-        h1 { font-size: 36px; line-height: 1.2; font-weight: 700; overflow-wrap: anywhere; flex: 1 1 auto; min-width: 0; }
-        .account-state { flex: none; text-align: right; }
+        .fact .ic { width: auto; height: 0.85em; flex: none; color: var(--muted); }
+        .fact-divider { width: 1px; height: 0.85em; background: var(--line); flex: none; align-self: center; }
+        h1 { font-size: inherit; line-height: inherit; font-weight: 700; overflow-wrap: anywhere; flex: 1 1 auto; min-width: 0; }
+        .account-state { flex-shrink: 0; text-align: right; height: 1.2em; display: flex; align-items: center; }
         .generated { margin-top: 4px; font-size: 13px; color: var(--muted); }
-        .account-state { flex-shrink: 0; text-align: right; }
         .state-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
         .badge {
             display: inline-flex;
@@ -143,7 +150,7 @@
         @media (max-width: 480px) {
             .identity { padding: 16px 18px 12px; }
             .details { padding: 0 18px 16px; }
-            h1 { font-size: 32px; }
+            .identity-head { font-size: 32px; }
             .email-value { font-size: 18px; }
             .fact { font-size: 20px; }
         }
@@ -188,6 +195,7 @@
                 </div>
                 <div class="identity-facts">
                     <span class="fact mono">{{ icon('uid') }}UID {{ uid }}</span>
+                    <span class="fact-divider" aria-hidden="true"></span>
                     <span class="fact mono">{{ icon('score') }}{{ '{:,}'.format(score) }}</span>
                 </div>
             </div>
