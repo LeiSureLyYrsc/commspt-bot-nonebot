@@ -11,6 +11,16 @@
         @import 'https://assets-z1-113a.serinanya.fwnet/fontawesome@6.5.2/css/fontawesome.min.css';
     </style>
     <style>
+        /* 内网苹方 Bold：优先用于整卡，缺失时回退到系统字体栈 */
+        @font-face {
+            font-family: "PingFang Bold";
+            src: url("https://assets-z1-113a.serinanya.fwnet/PingFang%20Bold.ttf") format("truetype");
+            font-weight: 100 900;
+            font-style: normal;
+            font-display: swap;
+        }
+    </style>
+    <style>
         :root {
             color-scheme: light;
             --surface: #fcfdfc;
@@ -54,7 +64,7 @@
             padding: 8px;
             background: var(--soft);
             color: var(--ink);
-            font: 400 18px/1.4 "Noto Sans CJK SC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            font: 400 18px/1.4 "PingFang Bold", "Noto Sans CJK SC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
         }
         body.no-chrome { background: transparent; padding: 0; }
         h1, h2, p, dl, dd { margin: 0; }
@@ -89,8 +99,12 @@
         /* UID 与积分同属「账号数字」，并排成一组 */
         .identity-facts { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
         .fact { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 22px; font-weight: 600; color: var(--ink); }
-        .fact .ic { width: auto; height: 0.85em; flex: none; color: var(--muted); }
-        .fact-divider { width: 1px; height: 0.85em; background: var(--line); flex: none; align-self: center; }
+        /* 图标按字号取正方形框：FontAwesome 的 JS 会注入 .svg-inline--fa{height:1em}
+           及按 viewBox 算出的宽度规则，若只写 width:auto 会被它盖掉，导致 id-card 与
+           wallet 宽度不一致（实测差 ~2.3px）。改用 svg.ic 提特异性并锁成 1em 见方，
+           两个图标等宽等高、高度与 22px 字号齐平。 */
+        .fact svg.ic { width: 1em; height: 1em; flex: none; color: var(--muted); }
+        .fact-divider { width: 1px; height: 1em; background: var(--line); flex: none; align-self: center; }
         h1 { font-size: inherit; line-height: inherit; font-weight: 700; overflow-wrap: anywhere; flex: 1 1 auto; min-width: 0; }
         .account-state { flex-shrink: 0; text-align: right; height: 1.2em; display: flex; align-items: center; }
         .generated { margin-top: 4px; font-size: 13px; color: var(--muted); }
