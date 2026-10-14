@@ -185,6 +185,21 @@ async def member_join_request(bot: Bot, event: GroupRequestEvent):
             if email_uid := await LittleSkinUser.qmail_api(qq=applicant):  # 若申请人 QQ 邮箱曾绑定过其他 UID 则提示可能正确的 UID
                 message.append(f"ⓘ 可能才为正确对应的 UID: {email_uid.uid}")
 
+            # 响应体里的 invited_id 有时才是真实对应的 UID：
+            # 当协议端给出的请求体中 user_id 为 0（申请人身份字段缺失/异常）时，
+            # 被邀请人 invited_id 往往才代表真正要核对的那个人。
+            # 这是「需要判断」的提示，因此独立成条（不与上面的 UID 提示合并同类项），
+            # 仅当响应体确实携带了非零 invited_id 时才输出，避免无意义空提示。
+            if invited_id := getattr(req, "invited_id", None):  # Getattr 兜底：协议端未携带该字段时属性不存在
+                hint = f"ⓘ 响应体(invited_id)反映他可能是: {invited_id}"
+                # message 各项会被 _send_approval_notice 用 "\n\n".join 拼接，
+                # 直接 append 会在两条 ⓘ 之间多出一个空行；这里改用单换行紧跟上一行，
+                # 使两条同族提示紧凑相邻（其它提示行之间的空行保持不变）。
+                if message and message[-1].startswith("ⓘ 可能才为正确对应的 UID:"):
+                    message[-1] += f"\n{hint}"
+                else:
+                    message.append(hint)
+
             # failed: not pass verification
             logger.warning(
                 f"(main) Member Join Request Event {req.sub_type} was ignored. (GENERAL) {applicant} > {answer}",
