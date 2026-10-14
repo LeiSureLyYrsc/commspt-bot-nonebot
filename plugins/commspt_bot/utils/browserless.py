@@ -58,6 +58,26 @@ def _resolve_assets() -> dict[str, str]:
     }
 
 
+# 本地渲染的空白 file:// 锚点页文件名（放在 assets/browserless 内，随该目录一并被 gitignore）。
+# 它仅用于建立一个 file:// 源，见 _screenshot_local 中关于 set_content 安全模型限制的说明。
+_LOCAL_ANCHOR_NAME = "_anchor.html"
+_LOCAL_ANCHOR_HTML = "<!doctype html><html><head></head><body></body></html>"
+
+
+async def _ensure_local_anchor() -> str:
+    """返回本地空白 file:// 锚点页的 URI；不存在则创建。
+
+    该锚点页只是给 Playwright 一个真实的 ``file://`` 文档源，供后续 ``document.write``
+    注入模板 HTML 时，页面能以 file:// 源加载同目录的 file:// 资源（图标 JS/CSS 与字体）。
+    """
+    local_dir = ASSETS_DIR / "browserless"
+    local_dir.mkdir(parents=True, exist_ok=True)
+    anchor_path = local_dir / _LOCAL_ANCHOR_NAME
+    if not anchor_path.is_file():
+        anchor_path.write_text(_LOCAL_ANCHOR_HTML, encoding="utf-8")
+    return anchor_path.resolve().as_uri()
+
+
 # ---------------------------------------------------------------------------
 # LOCAL 渲染后端：常驻 Chromium（懒初始化）
 # ---------------------------------------------------------------------------
@@ -129,8 +149,27 @@ async def _screenshot_local(
     )
     try:
         page = await context.new_page()
-        # 等待网络空闲（networkidle）确保静态资源加载完成，再按视口截图
-        await page.set_content(html, wait_until="networkidle")
+        # 为什么不用 set_content：
+        #   LOCAL 模式下模板的 css/js/字体都指向本地 file:// 资源（assets/browserless）。
+        #   ``page.set_content()`` 生成的文档源是「about:blank 不透明源」，Chromium 出于
+        #   本地文件安全模型，禁止该源加载任何 file:// 子资源——实测表现为：
+        #     · <script src="file://…/all.min.js"> 不执行 → FontAwesome 图标不转换（无图标）
+        #     · @import 'file://…/fontawesome.min.css' 不生效 → 无图标样式
+        #     · @font-face src=file://… 加载失败（document.fonts 状态为 error）→ 字体回退
+        #   该限制由页面源（origin）决定，与 CSP / --disable-web-security / --allow-file-access-from-files
+        #   等启动参数无关，无法通过 flag 绕过（已实测均无效）。
+        #
+        # 因此改为：先 goto 一个静态空白 file:// 锚点页建立「file:// 源」，再 document.write
+        # 注入模板 HTML。此时页面源就是 file://，同源 file:// 子资源可正常加载，
+        # 图标与字体均生效，且资源保持外链（无需把 JS/字体内联进 HTML）。
+        anchor = await _ensure_local_anchor()
+        await page.goto(anchor, wait_until="load")
+        await page.evaluate(
+            "html => { document.open(); document.write(html); document.close(); }",
+            html,
+        )
+        # document.write 后等待子资源（FA 的 JS/CSS、字体）发起并空闲，语义对齐原 set_content 的 networkidle
+        await page.wait_for_load_state("networkidle")
         # 字体/图标就绪后再截图（见 _READY）
         await asyncio.wait_for(page.evaluate(_READY), timeout=_FONT_TIMEOUT_SECONDS + 5)
         return await page.screenshot(type="png", full_page=full_page, omit_background=transparent)
