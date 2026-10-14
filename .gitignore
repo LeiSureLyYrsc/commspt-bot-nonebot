@@ -20,6 +20,9 @@ cache/
 join-announcement.txt
 .join-announcement.txt
 
+# 本地 Browserless 渲染资源（人工放入，不入库）
+assets/browserless/
+
 # 测试（不纳入版本控制）
 tests/
 

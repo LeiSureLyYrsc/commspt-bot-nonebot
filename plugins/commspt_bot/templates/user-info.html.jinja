@@ -4,17 +4,20 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>LittleSkin 用户档案</title>
+    {# 资源基址由渲染后端注入，见 browserless.py 的 _resolve_assets() #}
+    {% if assets_origin %}
+    <link rel="preconnect" href="{{ assets_origin }}" />
+    {% endif %}
     {# 引用 Font Awesome 6.5.2 #}
-    <link rel="preconnect" href="https://assets-z1-113a.serinanya.fwnet" />
-    <script async src="https://assets-z1-113a.serinanya.fwnet/fontawesome@6.5.2/js/all.min.js"></script>
+    <script async src="{{ fa_js_url }}"></script>
     <style>
-        @import 'https://assets-z1-113a.serinanya.fwnet/fontawesome@6.5.2/css/fontawesome.min.css';
+        @import '{{ fa_css_url }}';
     </style>
     <style>
-        /* 内网苹方 Bold：优先用于整卡，缺失时回退到系统字体栈 */
+        /* 苹方 Bold：优先用于整卡，缺失时回退到系统字体栈 */
         @font-face {
             font-family: "PingFang Bold";
-            src: url("https://assets-z1-113a.serinanya.fwnet/PingFang%20Bold.ttf") format("truetype");
+            src: url("{{ font_url }}") format("truetype");
             font-weight: 100 900;
             font-style: normal;
             font-display: swap;

@@ -19,7 +19,44 @@ from jinja2 import Environment, FileSystemLoader
 from nonebot import get_driver, logger
 from pydantic import BaseModel
 
-from plugins.commspt_bot.config import S_, TEMPLATE_DIR, VERIFY_CONTENT
+from plugins.commspt_bot.config import ASSETS_DIR, S_, TEMPLATE_DIR, VERIFY_CONTENT
+
+# 模板资源基址：REMOTE 走内网 CDN；LOCAL 走本地 assets/browserless（file:// 便于 set_content 解析，
+# 因 set_content 无 baseURL，相对路径无法解析）。LOCAL 所需的三个文件由人工放入该目录（已 gitignore）。
+_REMOTE_ASSETS_ORIGIN = "https://assets-z1-113a.serinanya.fwnet"
+_REMOTE_FA_JS_URL = f"{_REMOTE_ASSETS_ORIGIN}/fontawesome@6.5.2/js/all.min.js"
+_REMOTE_FA_CSS_URL = f"{_REMOTE_ASSETS_ORIGIN}/fontawesome@6.5.2/css/fontawesome.min.css"
+_REMOTE_FONT_URL = f"{_REMOTE_ASSETS_ORIGIN}/PingFang%20Bold.ttf"
+# LOCAL 资源目录内必须存在的文件（与用户放入的文件名保持约定）
+_LOCAL_FONT_FILE = "PingFangSC-Bold.ttf"
+
+
+def _resolve_assets() -> dict[str, str]:
+    """按渲染模式返回模板资源变量（assets_origin / fa_js_url / fa_css_url / font_url）。
+
+    LOCAL 模式下要求 assets/browserless 内三个资源齐全，缺失即抛错终止（不静默回退远程，
+    否则会拍出缺字体/缺图标的卡片）。
+    """
+    if S_.browserless_mode != "LOCAL":
+        return {
+            "assets_origin": _REMOTE_ASSETS_ORIGIN,
+            "fa_js_url": _REMOTE_FA_JS_URL,
+            "fa_css_url": _REMOTE_FA_CSS_URL,
+            "font_url": _REMOTE_FONT_URL,
+        }
+
+    local_dir = ASSETS_DIR / "browserless"
+    required = ("all.min.js", "fontawesome.min.css", _LOCAL_FONT_FILE)
+    if any(not (local_dir / name).is_file() for name in required):
+        raise RuntimeError("处理你的请求时发生了一些问题：LOCAL 模式下缺失部分资源文件")
+    base = local_dir.resolve().as_uri()
+    return {
+        "assets_origin": "",  # 本地无需 preconnect
+        "fa_js_url": f"{base}/all.min.js",
+        "fa_css_url": f"{base}/fontawesome.min.css",
+        "font_url": f"{base}/{_LOCAL_FONT_FILE}",
+    }
+
 
 # ---------------------------------------------------------------------------
 # LOCAL 渲染后端：常驻 Chromium（懒初始化）
@@ -167,8 +204,10 @@ async def screenshot(
     # Jinja2 render: 从项目模板目录 TEMPLATE_DIR 加载指定模板文件
     jinja_env = Environment(loader=FileSystemLoader(TEMPLATE_DIR), autoescape=True)
     template = jinja_env.get_template(name=template_name)
-    params["transparent"] = transparent
-    html = template.render(params.model_dump()) if isinstance(params, BaseModel) else template.render(params)
+    # 资源基址按渲染后端注入（REMOTE→内网 CDN；LOCAL→本地 assets/browserless，缺失即报错）
+    assets = _resolve_assets()
+    base_ctx = params.model_dump() if isinstance(params, BaseModel) else dict(params)
+    html = template.render({**base_ctx, "transparent": transparent, **assets})
 
     if S_.browserless_mode == "LOCAL":
         return await _screenshot_local(
