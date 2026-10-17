@@ -26,9 +26,9 @@ from plugins.commspt_bot.config import ASSETS_DIR, S_, TEMPLATE_DIR, VERIFY_CONT
 _REMOTE_ASSETS_ORIGIN = "https://assets-z1-113a.serinanya.fwnet"
 _REMOTE_FA_JS_URL = f"{_REMOTE_ASSETS_ORIGIN}/fontawesome@6.5.2/js/all.min.js"
 _REMOTE_FA_CSS_URL = f"{_REMOTE_ASSETS_ORIGIN}/fontawesome@6.5.2/css/fontawesome.min.css"
-_REMOTE_FONT_URL = f"{_REMOTE_ASSETS_ORIGIN}/PingFang%20Bold.ttf"
+_REMOTE_FONT_URL = f"{_REMOTE_ASSETS_ORIGIN}/MiSans-Bold.ttf"
 # LOCAL 资源目录内必须存在的文件（与用户放入的文件名保持约定）
-_LOCAL_FONT_FILE = "PingFangSC-Bold.ttf"
+_LOCAL_FONT_FILE = "MiSans-Bold.ttf"
 
 
 def _resolve_assets() -> dict[str, str]:

@@ -92,20 +92,24 @@ cp config.yml.example config.yml
 | `LITTLESKIN_ADMIN_TOKEN` | LittleSkin Admin API Token |
 | `DB_MONGO__URL` | MongoDB 连接串（QQ↔UID 映射） |
 | `API_BROWSERLESS__ENDPOINT` | browserless 截图服务（`BROWSERLESS_MODE=REMOTE` 时使用） |
-| `BROWSERLESS_MODE` | 出图后端：`REMOTE`（默认，调用远程 Browserless）或 `LOCAL`（本地 Playwright 渲染）。`LOCAL` 需先安装可选依赖与浏览器内核：`uv sync --extra render-local && uv run playwright install chromium`，并自行准备 `assets/browserless/` 下的本地资源（含版权字体，详见下文「本地渲染」小节） |
+| `BROWSERLESS_MODE` | 出图后端：`REMOTE`（默认，调用远程 Browserless）或 `LOCAL`（本地 Playwright 渲染）。`LOCAL` 需先安装可选依赖与浏览器内核：`uv sync --extra render-local && uv run playwright install chromium`，并自行准备 `assets/browserless/` 下的本地资源（含字体，详见下文「本地渲染」小节） |
 | `FAILED_RETRY_TIME` | 外部网络服务请求失败后的重试次数（默认 `2`，即合计最多 3 次请求；`0` 表示不重试）。生效于 `&ygg` / `&pro` / `&user` / `&uid`，渲染类服务（SkinRenderMC / Browserless / 本地 Playwright）与 QQ 协议端调用不重试 |
 | `API_SKINRENDERMC__ENDPOINT` | 皮肤渲染服务 |
 | `API_CLOUDCONFIG` | 云控配置（JSON 对象） |
 | `COMMSPT_SIMPLE_RESPONSE_FILE` | 简易问答内容 JSON 文件路径（默认项目根目录 `commspt_simple_response.json`） |
 | `COMMSPT_ASSETS_DIR` | 静态资源目录（默认项目根目录 `assets/`） |
 
-#### 本地渲染（`BROWSERLESS_MODE=LOCAL`）与字体版权
+#### 本地渲染（`BROWSERLESS_MODE=LOCAL`）与字体
 
 `LOCAL` 模式不依赖远程 Browserless，改用本地 Playwright + Chromium 出图，模板中所有远程资源会改从项目根目录的 `assets/browserless/` 读取。
 
-> **字体版权提示**：该目录中的中文字体（如 **苹方 PingFang SC**）为**受版权保护的商业字体**，本项目**不随仓库分发**，也**不承担任何授权责任**。`assets/browserless/` 已加入 `.gitignore`，**不会**被提交。
+卡片的主字体是 **MiSans Bold**（小米 MiSans，免费商用），由 `@font-face` 显式加载，`REMOTE` 与 `LOCAL` 都用它，不再依赖渲染机上装了什么字体——早期用系统字体栈时，Windows 命中 `Noto Sans SC`、Linux 命中 `Noto Sans CJK SC`，字重与度量都不同，同一模板在两处出图并不一致。
+
+UID / 积分 / 邮箱 / QQ / 时间戳等编号类字段另用等宽字体栈（`SFMono-Regular, Consolas, "Liberation Mono", monospace`）——这些字段逐位核对，等宽位宽更易读。该栈逐平台解析，属有意为之。`email_help` 里的 `⚠️` 不在 MiSans 内，回退到宿主字体是可接受的。
+
+> **字体许可**：MiSans 由小米提供，免费商用（含嵌入），许可要求「在软件中注明使用了 MiSans 字体」。本仓库不随附字体文件，请自行从[官方页面](https://hyperos.mi.com/font/zh/)获取并遵守其许可协议。`assets/browserless/` 已加入 `.gitignore`，不会被提交。
 >
-> 你需要**自行**将已获授权的字体文件放入该目录并确保使用合规。若未放入字体，`LOCAL` 模式启动出图时会直接报错终止（不静默回退），避免产出缺字体的卡片。
+> 若未放入字体，`LOCAL` 模式启动出图时会直接报错终止（不静默回退），避免产出缺字体的卡片。
 
 `LOCAL` 模式所需的文件（文件名固定，缺失即报错）：
 
@@ -113,7 +117,7 @@ cp config.yml.example config.yml
 |---|---|---|
 | `all.min.js` | Font Awesome Free **6.5.2** | Font Awesome 6 的 JS（`<i>` → inline SVG 转换） |
 | `fontawesome.min.css` | Font Awesome Free **6.5.2** | Font Awesome 6 的 CSS |
-| `PingFangSC-Bold.ttf` | — | 中文粗体（版权字体的替代/自备文件，名称固定） |
+| `MiSans-Bold.ttf` | **4.009** | 卡片主字体（名称固定） |
 
 入群审批 `do` 命令只接受裸命令 `do accept` 或 `do reject [单个不含空白的原因词]`。`do` 使用前缀无关的原生 `on_regex`，因此带全局前缀的 `&do`（例如 `&do accept`）不会匹配，多词拒绝原因也不会匹配。
 
