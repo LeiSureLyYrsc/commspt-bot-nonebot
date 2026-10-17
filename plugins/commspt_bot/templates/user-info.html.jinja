@@ -8,11 +8,6 @@
     {% if assets_origin %}
     <link rel="preconnect" href="{{ assets_origin }}" />
     {% endif %}
-    {# 引用 Font Awesome 6.5.2 #}
-    <script async src="{{ fa_js_url }}"></script>
-    <style>
-        @import '{{ fa_css_url }}';
-    </style>
     <style>
         /* MiSans Bold：主字体，卡片绝大部分文字走它。
            渲染机未装字体栈里的其它字体，故用 @font-face 显式加载，两端出图一致。 */
@@ -103,54 +98,32 @@
             font-size: 36px;
             line-height: 1.2;
         }
-        /* ---- 字段标签行：图标 + 文字同底 ----------------------------------------
-           做法分两层——
-           1) 行按基线对齐：`align-items: baseline`（见下方 .fact / dt / .email-heading h2 /
-              .email-help / .qq-note / .ban-heading 各自的声明）。flex 行内 replaced 元素
-              （图标 svg）的基线就是它的下外边距边缘，于是图标盒底精确落在文字基线上，
-              与字体度量、行高、字号解耦。在此之前用 center 竖直居中，误差随字体度量与
-              行高变化——换字体即漂移（苹方 1.40/-0.34 vs MiSans 1.326/-0.282）。
-           2) 再按墨迹微调：图标盒底贴基线仍不等于「看得出来同底」——图标图形在自己的
-              1em 盒内留有不对称内缩（--ic-ink，实测 0–0.20em），文字墨迹也越过基线
-              （--ic-tail，数字 0.02–0.03em、汉字标签 0.07–0.08em）。两者由 translateY
-              逐图标/逐行补偿。
-           常量以 em 给出（相对本行字号），换字号或行高都不会漂移；数值由
-           tests/ui-compare 的审计脚本量出，判据与踩过的坑见 tests/ui-compare/DESIGN.md。 */
-        /* FontAwesome 的 JS 给 inline svg 注入 vertical-align:-.125em，会把行内图标整体抬起 */
-        svg.ic, svg.ban-icon { vertical-align: 0; }
-        /* 图标墨迹内缩（逐图标） */
-        svg[data-icon="id-card"] { --ic-ink: 0.1111em; }
-        svg[data-icon="wallet"] { --ic-ink: 0.0625em; }
-        svg[data-icon="handcuffs"] { --ic-ink: 0.1176em; }
-        svg[data-icon="envelope"] { --ic-ink: 0.1161em; }
-        svg[data-icon="qq"] { --ic-ink: 0em; }
-        svg[data-icon="signature"] { --ic-ink: 0.1625em; }
-        svg[data-icon="location-dot"] { --ic-ink: 0.0028em; }
-        svg[data-icon="door-open"] { --ic-ink: 0.0602em; }
-        svg[data-icon="right-to-bracket"] { --ic-ink: 0.0677em; }
-        svg[data-icon="check"] { --ic-ink: 0.2030em; }
-        svg[data-icon="triangle-exclamation"] { --ic-ink: 0.0677em; }
-        /* 本行文字「视觉墨迹底边」相对基线的量（逐行类；实测：最深的非下延笔画。
-           逗号 0.252em、Q 的尾巴 0.123em 本就该更低，不计入）
-           .fact 一行文字带 .mono，底边由等宽栈决定，而等宽栈逐平台解析不同字体
-           （Consolas 0.0112em / Liberation Mono 0.0098em / DejaVu Sans Mono 0.0190em），
-           故取覆盖三者的中值 0.014em：任一平台残差 ≤ 0.11px。 */
-        .fact { --ic-tail: 0.014em; }
-        dt { --ic-tail: 0.082em; }
-        .email-heading h2 { --ic-tail: 0.077em; }
-        .ban-heading { --ic-tail: 0.080em; }
-        .qq-note { --ic-tail: 0.083em; }
-        .email-help { --ic-tail: 0.082em; }
-        /* 补偿：把图标按其盒内内缩 + 本行文字下探量下移 */
-        svg.ic, svg.ban-icon { transform: translateY(calc(var(--ic-ink, 0em) + var(--ic-tail, 0em))); }
+        /* ---- 字段标签行：图标与文字视觉中心水平对齐 --------------------------
+           使用 align-items: center 结合紧凑 line-height，消除字体上下虚高，
+           使各类图标（svg.ic / svg.ban-icon）与文本字形的视觉中心在同一水平线上。 */
+        svg.ic, svg.ban-icon {
+            vertical-align: middle;
+            display: inline-block;
+        }
+
         /* UID 与积分同属「账号数字」，并排成一组 */
         .identity-facts { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
-        .fact { display: flex; align-items: baseline; gap: 7px; min-width: 0; font-size: 22px; font-weight: 600; color: var(--ink); }
-        /* 图标按字号取正方形框：FontAwesome 的 JS 会注入 .svg-inline--fa{height:1em}
-           及按 viewBox 算出的宽度规则，若只写 width:auto 会被它盖掉，导致 id-card 与
-           wallet 宽度不一致（实测差 ~2.3px）。改用 svg.ic 提特异性并锁成 1em 见方，
-           两个图标等宽等高、高度与 22px 字号齐平。 */
-        .fact svg.ic { width: 1em; height: 1em; flex: none; color: var(--muted); }
+        .fact {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            min-width: 0;
+            font-size: 22px;
+            font-weight: 600;
+            line-height: 1.2;
+            color: var(--ink);
+        }
+        .fact svg.ic {
+            height: 18px;
+            width: auto;
+            flex: none;
+            color: var(--muted);
+        }
         .fact-divider { width: 1px; height: 1em; background: var(--line); flex: none; align-self: center; }
         h1 { font-size: inherit; line-height: inherit; font-weight: 700; overflow-wrap: anywhere; flex: 1 1 auto; min-width: 0; }
         .account-state { flex-shrink: 0; text-align: right; height: 1.2em; display: flex; align-items: center; }
@@ -166,6 +139,7 @@
             color: var(--green);
             font-size: 14px;
             font-weight: 600;
+            line-height: 1;
             white-space: nowrap;
         }
         .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
@@ -179,28 +153,81 @@
             background: var(--red-bg);
             color: var(--red);
         }
-        .ban-heading { display: flex; align-items: baseline; gap: 8px; font-size: 17px; font-weight: 600; }
-        .ban-icon { flex: none; width: 20px; height: 20px; }
+        .ban-heading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 17px;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+        .ban-icon {
+            flex: none;
+            height: 18px;
+            width: auto;
+        }
         .ban-reason { margin-top: 6px; font-size: 20px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
         .details { padding: 0 18px 16px; }
         .email { padding: 10px 12px; border-radius: 14px; background: var(--soft); }
-        .email-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 4px; }
-        .email-heading h2 { font-size: 14px; font-weight: 600; }
+        .email-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 4px; }
+        .email-heading h2 {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.2;
+        }
         .email-value { font-size: 20px; font-weight: 500; overflow-wrap: anywhere; }
         .email.is-unverified .badge { background: var(--amber-bg); color: var(--amber); }
-        .email-help { margin-top: 4px; font-size: 12px; color: var(--amber); overflow-wrap: anywhere; }
+        .email-help {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 4px;
+            font-size: 12px;
+            line-height: 1.2;
+            color: var(--amber);
+            overflow-wrap: anywhere;
+        }
         .qq-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
         .qq-grid dd { font-size: 20px; line-height: 1.3; }
-        .qq-note { display: flex; align-items: baseline; gap: 5px; margin-top: 2px; font-size: 12px; color: var(--green); }
+        .qq-note {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 2px;
+            font-size: 12px;
+            line-height: 1.2;
+            color: var(--green);
+        }
         /* 积分移至身份区后剩 3 项：属地占满整行，两个时间戳成对，避免 2+1 留下空格 */
         .account-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; }
         .account-grid > .is-wide { grid-column: 1 / -1; }
         .qq-grid > div, .account-grid > div { min-width: 0; }
-        /* 字段标签：图标 + 文字（基线对齐，见文件上方「图标 + 文字同底」注释） */
-        .ic { width: 13px; height: 13px; flex: none; color: var(--muted); opacity: .85; }
-        .email-heading h2, dt { display: flex; align-items: baseline; gap: 5px; }
-        .email-help { display: flex; align-items: baseline; gap: 5px; }
-        dt { font-size: 12px; color: var(--muted); }
+        /* 字段标签图标：基础样式保持自然居中（用于上方邮箱、帮助等） */
+        .ic {
+            height: 12px;
+            width: auto;
+            flex: none;
+            color: var(--muted);
+            opacity: .85;
+        }
+        /* 底部五个字段标签（dt）：独立微调对齐与字重 */
+        dt {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.2;
+            color: var(--muted);
+        }
+        dt svg.ic {
+            height: 12px;
+            width: auto;
+            transform: translateY(-1px);
+        }
         dd { margin-top: 3px; font-size: 15px; line-height: 1.3; font-weight: 600; overflow-wrap: anywhere; }
         /* 相对时间为主读数，绝对时间降为次要行 */
         .ago { display: block; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
@@ -221,27 +248,34 @@
     </style>
 </head>
 <body{% if transparent %} class="no-chrome"{% endif %}>
-    {# FA-ICONS-START #}
-        {# 图标用 FontAwesome 6.5.2 类名；
-           <i> 由 FA 的 JS 转成 inline SVG，故无需内嵌 path #}
-        {% macro icon(name, cls='ic') -%}
-        {%- set glyph = {
-            'uid': 'fa-solid fa-id-card',
-            'banned': 'fa-solid fa-handcuffs',
-            'nickname': 'fa-solid fa-user',
-            'score': 'fa-solid fa-wallet',
-            'network': 'fa-solid fa-location-dot',
-            'qq': 'fa-brands fa-qq',
-            'check': 'fa-solid fa-check',
-            'signature': 'fa-solid fa-signature',
-            'register': 'fa-solid fa-door-open',
-            'last-sign': 'fa-solid fa-right-to-bracket',
-            'email': 'fa-solid fa-envelope',
-            'warn': 'fa-solid fa-exclamation-triangle',
-        }.get(name) -%}
-        {%- if glyph %}<i class="{{ glyph }} {{ cls }}" aria-hidden="true"></i>{% endif -%}
-        {%- endmacro %}
-        {# FA-ICONS-END #}
+    {# 内嵌 FontAwesome 原版矢量图标，无需外部字体或脚本依赖 #}
+    {% macro icon(name, cls='ic') -%}
+    {% if name == 'uid' %}
+    <svg class="{{ cls }}" viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M0 96l576 0c0-35.3-28.7-64-64-64L64 32C28.7 32 0 60.7 0 96zm0 32L0 416c0 35.3 28.7 64 64 64l448 0c35.3 0 64-28.7 64-64l0-288L0 128zM64 405.3c0-29.5 23.9-53.3 53.3-53.3l117.3 0c29.5 0 53.3 23.9 53.3 53.3c0 5.9-4.8 10.7-10.7 10.7L74.7 416c-5.9 0-10.7-4.8-10.7-10.7zM176 192a64 64 0 1 1 0 128 64 64 0 1 1 0-128zm176 16c0-8.8 7.2-16 16-16l128 0c8.8 0 16 7.2 16 16s-7.2 16-16 16l-128 0c-8.8 0-16-7.2-16-16zm0 64c0-8.8 7.2-16 16-16l128 0c8.8 0 16 7.2 16 16s-7.2 16-16 16l-128 0c-8.8 0-16-7.2-16-16zm0 64c0-8.8 7.2-16 16-16l128 0c8.8 0 16 7.2 16 16s-7.2 16-16 16l-128 0c-8.8 0-16-7.2-16-16z"/></svg>
+    {% elif name == 'score' %}
+    <svg class="{{ cls }}" viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M64 32C28.7 32 0 60.7 0 96L0 416c0 35.3 28.7 64 64 64l384 0c35.3 0 64-28.7 64-64l0-224c0-35.3-28.7-64-64-64L80 128c-8.8 0-16-7.2-16-16s7.2-16 16-16l368 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L64 32zM416 272a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"/></svg>
+    {% elif name == 'banned' %}
+    <svg class="{{ cls }}" viewBox="0 0 640 512" aria-hidden="true"><path fill="currentColor" d="M240 32a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zM192 48a32 32 0 1 1 0 64 32 32 0 1 1 0-64zm-32 80c17.7 0 32 14.3 32 32l8 0c13.3 0 24 10.7 24 24l0 16c0 1.7-.2 3.4-.5 5.1C280.3 229.6 320 286.2 320 352c0 88.4-71.6 160-160 160S0 440.4 0 352c0-65.8 39.7-122.4 96.5-146.9c-.4-1.6-.5-3.3-.5-5.1l0-16c0-13.3 10.7-24 24-24l8 0c0-17.7 14.3-32 32-32zm0 320a96 96 0 1 0 0-192 96 96 0 1 0 0 192zm192-96c0-25.9-5.1-50.5-14.4-73.1c16.9-32.9 44.8-59.1 78.9-73.9c-.4-1.6-.5-3.3-.5-5.1l0-16c0-13.3 10.7-24 24-24l8 0c0-17.7 14.3-32 32-32s32 14.3 32 32l8 0c13.3 0 24 10.7 24 24l0 16c0 1.7-.2 3.4-.5 5.1C600.3 229.6 640 286.2 640 352c0 88.4-71.6 160-160 160c-62 0-115.8-35.3-142.4-86.9c9.3-22.5 14.4-47.2 14.4-73.1zm224 0a96 96 0 1 0 -192 0 96 96 0 1 0 192 0zM368 0a32 32 0 1 1 0 64 32 32 0 1 1 0-64zm80 48a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"/></svg>
+    {% elif name == 'email' %}
+    <svg class="{{ cls }}" viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4L236.8 313.6c11.4 8.5 27 8.5 38.4 0L492.8 150.4c12.1-9.1 19.2-23.3 19.2-38.4c0-26.5-21.5-48-48-48L48 64zM0 176L0 384c0 35.3 28.7 64 64 64l384 0c35.3 0 64-28.7 64-64l0-208L294.4 339.2c-22.8 17.1-54 17.1-76.8 0L0 176z"/></svg>
+    {% elif name == 'warn' %}
+    <svg class="{{ cls }}" viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 32c14.2 0 27.3 7.5 34.5 19.8l216 368c7.3 12.4 7.3 27.7 .2 40.1S486.3 480 472 480L40 480c-14.3 0-27.6-7.7-34.7-20.1s-7-27.8 .2-40.1l216-368C228.7 39.5 241.8 32 256 32zm0 128c-13.3 0-24 10.7-24 24l0 112c0 13.3 10.7 24 24 24s24-10.7 24-24l0-112c0-13.3-10.7-24-24-24zm32 224a32 32 0 1 0 -64 0 32 32 0 1 0 64 0z"/></svg>
+    {% elif name == 'qq' %}
+    <svg class="{{ cls }}" viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M433.754 420.445c-11.526 1.393-44.86-52.741-44.86-52.741 0 31.345-16.136 72.247-51.051 101.786 16.842 5.192 54.843 19.167 45.803 34.421-7.316 12.343-125.51 7.881-159.632 4.037-34.122 3.844-152.316 8.306-159.632-4.037-9.045-15.25 28.918-29.214 45.783-34.415-34.92-29.539-51.059-70.445-51.059-101.792 0 0-33.334 54.134-44.859 52.741-5.37-.65-12.424-29.644 9.347-99.704 10.261-33.024 21.995-60.478 40.144-105.779C60.683 98.063 108.982.006 224 0c113.737.006 163.156 96.133 160.264 214.963 18.118 45.223 29.912 72.85 40.144 105.778 21.768 70.06 14.716 99.053 9.346 99.704z"/></svg>
+    {% elif name == 'signature' %}
+    <svg class="{{ cls }}" viewBox="0 0 640 512" aria-hidden="true"><path fill="currentColor" d="M192 128c0-17.7 14.3-32 32-32s32 14.3 32 32l0 7.8c0 27.7-2.4 55.3-7.1 82.5l-84.4 25.3c-40.6 12.2-68.4 49.6-68.4 92l0 71.9c0 40 32.5 72.5 72.5 72.5c26 0 50-13.9 62.9-36.5l13.9-24.3c26.8-47 46.5-97.7 58.4-150.5l94.4-28.3-12.5 37.5c-3.3 9.8-1.6 20.5 4.4 28.8s15.7 13.3 26 13.3l128 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-83.6 0 18-53.9c3.8-11.3 .9-23.8-7.4-32.4s-20.7-11.8-32.2-8.4L316.4 198.1c2.4-20.7 3.6-41.4 3.6-62.3l0-7.8c0-53-43-96-96-96s-96 43-96 96l0 32c0 17.7 14.3 32 32 32s32-14.3 32-32l0-32zm-9.2 177l49-14.7c-10.4 33.8-24.5 66.4-42.1 97.2l-13.9 24.3c-1.5 2.6-4.3 4.3-7.4 4.3c-4.7 0-8.5-3.8-8.5-8.5l0-71.9c0-14.1 9.3-26.6 22.8-30.7zM24 368c-13.3 0-24 10.7-24 24s10.7 24 24 24l40.3 0c-.2-2.8-.3-5.6-.3-8.5L64 368l-40 0zm592 48c13.3 0 24-10.7 24-24s-10.7-24-24-24l-310.1 0c-6.7 16.3-14.2 32.3-22.3 48L616 416z"/></svg>
+    {% elif name == 'network' %}
+    <svg class="{{ cls }}" viewBox="0 0 384 512" aria-hidden="true"><path fill="currentColor" d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg>
+    {% elif name == 'register' %}
+    <svg class="{{ cls }}" viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M320 32c0-9.9-4.5-19.2-12.3-25.2S289.8-1.4 280.2 1l-179.9 45C79 51.3 64 70.5 64 92.5L64 448l-32 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l64 0 192 0 32 0 0-32 0-448zM256 256c0 17.7-10.7 32-24 32s-24-14.3-24-32s10.7-32 24-32s24 14.3 24 32zm96-128l96 0 0 352c0 17.7 14.3 32 32 32l64 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-32 0 0-320c0-35.3-28.7-64-64-64l-96 0 0 64z"/></svg>
+    {% elif name == 'last-sign' %}
+    <svg class="{{ cls }}" viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M217.9 105.9L340.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L217.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1L32 320c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM352 416l64 0c17.7 0 32-14.3 32-32l0-256c0-17.7-14.3-32-32-32l-64 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l64 0c53 0 96 43 96 96l0 256c0 53-43 96-96 96l-64 0c-17.7 0-32-14.3-32-32s14.3-32 32-32z"/></svg>
+    {% elif name == 'check' %}
+    <svg class="{{ cls }}" viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>
+    {% elif name == 'nickname' %}
+    <svg class="{{ cls }}" viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z"/></svg>
+    {% endif %}
+    {%- endmacro %}
     {% macro timestamp(value) -%}
     {% set parts = value.split(' ', 1) %}
     <time class="timestamp mono" datetime="{{ value | replace(' ', 'T') }}"><span>{{ parts[0] }}</span>{% if parts | length > 1 %}<span class="clock">{{ parts[1] }}</span>{% endif %}</time>
