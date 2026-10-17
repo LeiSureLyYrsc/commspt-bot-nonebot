@@ -109,11 +109,11 @@ cp config.yml.example config.yml
 
 #### 本地渲染（`BROWSERLESS_MODE=LOCAL`）与字体
 
-`LOCAL` 模式不依赖远程 Browserless，改用本地 Playwright + Chromium 出图，模板中所有远程资源会改从项目根目录的 `assets/browserless/` 读取。
+`LOCAL` 模式不依赖远程 Browserless，改用本地 Playwright + Chromium 出图，模板中所有远程资源会改从项目根目录的 `assets/browserless/` 读取（当前只剩字体一个）。
 
 卡片的主字体是 **MiSans Bold**（小米 MiSans，免费商用），由 `@font-face` 显式加载，`REMOTE` 与 `LOCAL` 都用它，不再依赖渲染机上装了什么字体——早期用系统字体栈时，Windows 命中 `Noto Sans SC`、Linux 命中 `Noto Sans CJK SC`，字重与度量都不同，同一模板在两处出图并不一致。
 
-UID / 积分 / 邮箱 / QQ / 时间戳等编号类字段另用等宽字体栈（`SFMono-Regular, Consolas, "Liberation Mono", monospace`）——这些字段逐位核对，等宽位宽更易读。该栈逐平台解析，属有意为之。`email_help` 里的 `⚠️` 不在 MiSans 内，回退到宿主字体是可接受的。
+UID / 积分 / 邮箱 / QQ / 时间戳等编号类字段同样走 MiSans Bold，并开启 `font-variant-numeric: tabular-nums`——MiSans 自带 `tnum`，数字位宽一致，逐位核对一样清楚。整卡只用一种字体后，每行图标都能和同一套字体度量对齐，也不必再为「等宽栈在 Windows 命中 Consolas、Linux 命中 Liberation Mono / DejaVu Sans Mono」这类逐平台差异留补偿常量。`email_help` 里的 `⚠️` 不在 MiSans 内，回退到宿主字体是可接受的。
 
 > **字体许可**：MiSans 由小米提供，免费商用（含嵌入），许可要求「在软件中注明使用了 MiSans 字体」。本仓库不随附字体文件，请自行从[官方页面](https://hyperos.mi.com/font/zh/)获取并遵守其许可协议。`assets/browserless/` 已加入 `.gitignore`，不会被提交。
 >
@@ -123,9 +123,9 @@ UID / 积分 / 邮箱 / QQ / 时间戳等编号类字段另用等宽字体栈（
 
 | 文件 | 版本 | 说明 |
 |---|---|---|
-| `all.min.js` | Font Awesome Free **6.5.2** | Font Awesome 6 的 JS（`<i>` → inline SVG 转换） |
-| `fontawesome.min.css` | Font Awesome Free **6.5.2** | Font Awesome 6 的 CSS |
 | `MiSans-Bold.ttf` | **4.009** | 卡片主字体（名称固定） |
+
+图标已内嵌在模板里（inline SVG），渲染期不加载任何图标 JS/CSS，因此本地资源只需这一份字体。
 
 入群审批 `do` 命令只接受裸命令 `do accept` 或 `do reject [单个不含空白的原因词]`。`do` 使用前缀无关的原生 `on_regex`，因此带全局前缀的 `&do`（例如 `&do accept`）不会匹配，多词拒绝原因也不会匹配。
 
@@ -258,11 +258,9 @@ uv run pytest -q
 
 测试覆盖插件加载、Alconna 命令 + 1 个静态问答分发器（服务 commspt_simple_response.json 中的全部问答命令）的注册、命令参数解析（`Match` / `At` / 默认值 / 别名）、
 原生命令（`&mute` / `&unmute` / `&recall` / `&muteall` / `&unmuteall` / `do`）的规则匹配与参数解析、
-群白名单、管理员权限、业务逻辑直连测试（禁言 / 撤回 / 全员禁言的 API 调用参数）。此外：
-
-- `tests/test_join_action.py`：入群审批公共执行核心（`execute_join_action` 的批准/拒绝参数、异常归类），
-  以及表情审批凭证索引（`remember_approval` / `pop_approval` 的弹出即消费、过期清理等）的单元测试。
-- `tests/test_user_info_card.py`：用户信息卡的数据模型与渲染相关测试。
+群白名单、管理员权限、业务逻辑直连测试（禁言 / 撤回 / 全员禁言的 API 调用参数），
+以及入群审批公共执行核心（`execute_join_action` 的批准/拒绝参数、异常归类）、表情审批凭证索引
+（`remember_approval` / `pop_approval` 的弹出即消费、过期清理等）与用户信息卡的数据模型与渲染。
 
 <a id="simple-response-content"></a>
 

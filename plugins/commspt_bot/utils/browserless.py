@@ -22,38 +22,32 @@ from pydantic import BaseModel
 from plugins.commspt_bot.config import ASSETS_DIR, S_, TEMPLATE_DIR, VERIFY_CONTENT
 
 # 模板资源基址：REMOTE 走内网 CDN；LOCAL 走本地 assets/browserless（file:// 便于 set_content 解析，
-# 因 set_content 无 baseURL，相对路径无法解析）。LOCAL 所需的三个文件由人工放入该目录（已 gitignore）。
+# 因 set_content 无 baseURL，相对路径无法解析）。LOCAL 只需字体一个文件，由人工放入该目录（已 gitignore）。
+# 图标已内嵌为模板里的 inline SVG，渲染期不再有任何图标 JS/CSS 外链。
 _REMOTE_ASSETS_ORIGIN = "https://assets-z1-113a.serinanya.fwnet"
-_REMOTE_FA_JS_URL = f"{_REMOTE_ASSETS_ORIGIN}/fontawesome@6.5.2/js/all.min.js"
-_REMOTE_FA_CSS_URL = f"{_REMOTE_ASSETS_ORIGIN}/fontawesome@6.5.2/css/fontawesome.min.css"
 _REMOTE_FONT_URL = f"{_REMOTE_ASSETS_ORIGIN}/MiSans-Bold.ttf"
 # LOCAL 资源目录内必须存在的文件（与用户放入的文件名保持约定）
 _LOCAL_FONT_FILE = "MiSans-Bold.ttf"
 
 
 def _resolve_assets() -> dict[str, str]:
-    """按渲染模式返回模板资源变量（assets_origin / fa_js_url / fa_css_url / font_url）。
+    """按渲染模式返回模板资源变量（assets_origin / font_url）。
 
-    LOCAL 模式下要求 assets/browserless 内三个资源齐全，缺失即抛错终止（不静默回退远程，
-    否则会拍出缺字体/缺图标的卡片）。
+    LOCAL 模式下要求 assets/browserless 内字体存在，缺失即抛错终止（不静默回退远程，
+    否则会拍出缺字体的卡片）。
     """
     if S_.browserless_mode != "LOCAL":
         return {
             "assets_origin": _REMOTE_ASSETS_ORIGIN,
-            "fa_js_url": _REMOTE_FA_JS_URL,
-            "fa_css_url": _REMOTE_FA_CSS_URL,
             "font_url": _REMOTE_FONT_URL,
         }
 
     local_dir = ASSETS_DIR / "browserless"
-    required = ("all.min.js", "fontawesome.min.css", _LOCAL_FONT_FILE)
-    if any(not (local_dir / name).is_file() for name in required):
+    if not (local_dir / _LOCAL_FONT_FILE).is_file():
         raise RuntimeError("处理你的请求时发生了一些问题：LOCAL 模式下缺失部分资源文件")
     base = local_dir.resolve().as_uri()
     return {
         "assets_origin": "",  # 本地无需 preconnect
-        "fa_js_url": f"{base}/all.min.js",
-        "fa_css_url": f"{base}/fontawesome.min.css",
         "font_url": f"{base}/{_LOCAL_FONT_FILE}",
     }
 
@@ -68,7 +62,7 @@ async def _ensure_local_anchor() -> str:
     """返回本地空白 file:// 锚点页的 URI；不存在则创建。
 
     该锚点页只是给 Playwright 一个真实的 ``file://`` 文档源，供后续 ``document.write``
-    注入模板 HTML 时，页面能以 file:// 源加载同目录的 file:// 资源（图标 JS/CSS 与字体）。
+    注入模板 HTML 时，页面能以 file:// 源加载同目录的 file:// 资源（字体）。
     """
     local_dir = ASSETS_DIR / "browserless"
     local_dir.mkdir(parents=True, exist_ok=True)
@@ -85,19 +79,12 @@ _LAUNCH_LOCK = asyncio.Lock()
 _playwright = None
 _browser = None
 _FONT_TIMEOUT_SECONDS = 10
-# 截图前的就绪判定：字体加载完成 → 再等一帧布局绘制（避免中文/数字用临时回退字体渲染），
-# 最后等 FontAwesome 把 <i class="fa-…"> 换成 inline SVG（模板图标依赖它的 JS）。
+# 截图前的就绪判定：字体加载完成 → 再等一帧布局绘制（避免中文/数字用临时回退字体渲染）。
+# 模板图标已是内嵌 SVG，渲染期没有需要等待的外部图标脚本，故只剩这两步。
 # 合成单次 evaluate，LOCAL 与 REMOTE 两条后端共用同一套判定。
-_SELECTORS_READY = "i.fa-solid, i.fa-brands"
 _READY = (
     "async () => { await document.fonts.ready; "
-    "await new Promise(resolve => requestAnimationFrame(resolve)); "
-    f"if (!document.querySelector('{_SELECTORS_READY}')) return true; "
-    "const deadline = Date.now() + 5000; "
-    "while (Date.now() < deadline) { "
-    f"  if (!document.querySelector('{_SELECTORS_READY}')) return true; "
-    "  await new Promise(r => setTimeout(r, 50)); "
-    "} return true; }"
+    "await new Promise(resolve => requestAnimationFrame(resolve)); return true; }"
 )
 
 
